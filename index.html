@@ -306,12 +306,11 @@
     <!-- Encoding -->
     <div class="tool-group" style="border-right:none">
         <select id="encoding" onchange="changeEncoding()">
-            <option value="UTF8">UTF-8</option>
-            <option value="UTF8BOM">UTF-8 (BOM)</option>
-            <option value="SJIS">Shift_JIS</option>
-            <option value="EUCJP">EUC-JP</option>
-            <option value="JIS">JIS</option>
-            <option value="UTF16">UTF-16</option>
+            <option value="SJIS">ANSI (Shift_JIS)</option>
+            <option value="UTF16LE">UTF-16 LE</option>
+            <option value="UTF16BE">UTF-16 BE</option>
+            <option value="UTF8" selected>UTF-8</option>
+            <option value="UTF8BOM">UTF-8 (BOM 付き)</option>
         </select>
     </div>
 </div>
@@ -418,7 +417,6 @@
         let currentLineLength = 0;
         let lastToken = '';
 
-        // Clean redundant spaces but keep single spaces for separation
         const cleanFormula = formula.replace(/\s+/g, ' ');
 
         for (let i = 0; i < cleanFormula.length; i++) {
@@ -457,7 +455,6 @@
                 
                 if (currentContext) {
                     currentContext.argCount++;
-                    // LET Logic: Names and Values in pairs separated by space, line break after each pair
                     if (currentContext.isLET && currentContext.argCount % 2 !== 0) {
                         result += char + ' ';
                         currentLineLength += 2;
@@ -519,7 +516,6 @@
             result += char;
         }
 
-        // Clean up: remove redundant spaces and specifically remove space after comma
         editor.value = result.replace(/\s+/g, ' ')
                              .replace(/,\s+/g, ',')
                              .trim();
@@ -571,13 +567,11 @@
         let index = text.indexOf(query, startIndex);
         if (index === -1) index = text.indexOf(query, 0);
         if (index !== -1) {
-            // FIX: Only focus the editor if we are NOT typing in the search box
             if (!isFromInput) {
                 editor.focus();
             }
             editor.setSelectionRange(index, index + query.length);
             
-            // Scroll into view
             const lineHeight = parseFloat(getComputedStyle(editor).lineHeight);
             const linesBefore = text.substring(0, index).split('\n').length;
             editorWrapper.scrollTop = (linesBefore - 5) * lineHeight; 
@@ -688,8 +682,21 @@
         reader.onload = function(e) {
             currentRawData = new Uint8Array(e.target.result);
             let detected = Encoding.detect(currentRawData);
-            document.getElementById('encoding').value = detected || 'UTF8';
-            applyEncoding(detected || 'UTF8');
+            
+            // Map detected to notepad styles
+            let target = 'UTF8';
+            if (detected === 'SJIS') target = 'SJIS';
+            else if (detected === 'UTF16LE') target = 'UTF16LE';
+            else if (detected === 'UTF16BE') target = 'UTF16BE';
+            else if (detected === 'UTF8') {
+                // Check for BOM
+                if (currentRawData[0] === 0xEF && currentRawData[1] === 0xBB && currentRawData[2] === 0xBF) {
+                    target = 'UTF8BOM';
+                }
+            }
+            
+            document.getElementById('encoding').value = target;
+            applyEncoding(target);
             saveToHistory();
         };
         reader.readAsArrayBuffer(file);
@@ -699,20 +706,42 @@
     function applyEncoding(targetEnc) {
         if (!currentRawData) return;
         try {
-            let fromEnc = targetEnc === 'UTF8BOM' ? 'UTF8' : targetEnc;
+            let fromEnc = targetEnc;
+            if (targetEnc === 'UTF8BOM') fromEnc = 'UTF8';
+            
             const unicodeArray = Encoding.convert(currentRawData, { to: 'UNICODE', from: fromEnc });
             let text = Encoding.codeToString(unicodeArray);
+            
+            // Strip BOM for display
             if (text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
+            
             editor.value = text;
-            encDisplay.textContent = targetEnc === 'UTF8BOM' ? 'UTF-8 (BOM)' : targetEnc;
+            
+            // Display label matching Notepad selection
+            const labelMap = {
+                'SJIS': 'ANSI (Shift_JIS)',
+                'UTF16LE': 'UTF-16 LE',
+                'UTF16BE': 'UTF-16 BE',
+                'UTF8': 'UTF-8',
+                'UTF8BOM': 'UTF-8 (BOM 付き)'
+            };
+            encDisplay.textContent = labelMap[targetEnc] || 'UTF-8';
+            
             updateLineNumbers(); updateStatus();
         } catch (e) { showAlertModal("エラー", "文字コードの変換に失敗しました。"); }
     }
 
     function changeEncoding() {
         const enc = document.getElementById('encoding').value;
+        const labelMap = {
+            'SJIS': 'ANSI (Shift_JIS)',
+            'UTF16LE': 'UTF-16 LE',
+            'UTF16BE': 'UTF-16 BE',
+            'UTF8': 'UTF-8',
+            'UTF8BOM': 'UTF-8 (BOM 付き)'
+        };
         if (currentRawData) { applyEncoding(enc); saveToHistory(); }
-        else encDisplay.textContent = enc === 'UTF8BOM' ? 'UTF-8 (BOM)' : enc;
+        else encDisplay.textContent = labelMap[enc] || 'UTF-8';
     }
 
     function saveFile() {
@@ -720,14 +749,34 @@
         const targetEnc = document.getElementById('encoding').value;
         const filename = fileNameInput.value || "untitled.txt";
         const unicodeArray = Encoding.stringToCode(text);
-        let toEnc = targetEnc === 'UTF8BOM' ? 'UTF8' : targetEnc;
+        
+        let toEnc = targetEnc;
+        if (targetEnc === 'UTF8BOM') toEnc = 'UTF8';
+        
         let encodedArray = Encoding.convert(unicodeArray, { to: toEnc, from: 'UNICODE' });
+        
+        // Handle BOM for UTF-8 (BOM付き)
         if (targetEnc === 'UTF8BOM') {
             const bom = [0xEF, 0xBB, 0xBF];
+            const newArray = new Uint8Array(bom.length + encodedArray.length);
+            newArray.set(bom, 0); 
+            newArray.set(encodedArray, bom.length);
+            encodedArray = newArray;
+        } 
+        // Handle BOM for UTF-16 styles if not already present
+        else if (targetEnc === 'UTF16LE' && (encodedArray[0] !== 0xFF || encodedArray[1] !== 0xFE)) {
+            const bom = [0xFF, 0xFE];
             const newArray = new Uint8Array(bom.length + encodedArray.length);
             newArray.set(bom, 0); newArray.set(encodedArray, bom.length);
             encodedArray = newArray;
         }
+        else if (targetEnc === 'UTF16BE' && (encodedArray[0] !== 0xFE || encodedArray[1] !== 0xFF)) {
+            const bom = [0xFE, 0xFF];
+            const newArray = new Uint8Array(bom.length + encodedArray.length);
+            newArray.set(bom, 0); newArray.set(encodedArray, bom.length);
+            encodedArray = newArray;
+        }
+
         const blob = new Blob([new Uint8Array(encodedArray)], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
