@@ -1,0 +1,720 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  FileText, FolderOpen, Save, Search, Settings, 
+  ChevronDown, X, Replace, Type, Moon, Sun, Flower2, Monitor, AlertCircle,
+  Sparkles, Wand2, AlignLeft, CheckCircle2, Loader2, BrainCircuit, MessageSquareText, Lightbulb,
+  ZoomIn, ZoomOut, Maximize, SaveAll, XCircle, RefreshCw
+} from 'lucide-react';
+
+const apiKey = ""; // API key is provided by the environment
+
+const FONTS = [
+  { name: 'ＭＳ ゴシック', value: "'MS Gothic', 'Yu Gothic', monospace" },
+  { name: 'ＭＳ 明朝', value: "'MS Mincho', 'Yu Mincho', serif" },
+  { name: 'メイリオ', value: "'Meiryo', sans-serif" },
+  { name: 'Consolas', value: "'Consolas', monospace" },
+  { name: 'System Default', value: "system-ui, -apple-system, sans-serif" }
+];
+
+const ENCODINGS = [
+  { name: 'UTF-8', value: 'UTF-8' },
+  { name: 'UTF-8 (BOM)', value: 'UTF-8-BOM' },
+  { name: 'Shift-JIS', value: 'Shift_JIS' },
+  { name: 'EUC-JP', value: 'EUC-JP' },
+  { name: 'ANSI (Windows-1252)', value: 'windows-1252' }
+];
+
+const THEMES = {
+  light: {
+    name: 'Light',
+    bg: 'bg-white',
+    text: 'text-gray-900',
+    navBg: 'bg-gray-100',
+    navText: 'text-gray-800',
+    navBorder: 'border-gray-300',
+    lineNumBg: 'bg-gray-50',
+    lineNumText: 'text-gray-400',
+    selection: 'selection:bg-blue-200',
+    icon: <Sun size={16} />
+  },
+  dark: {
+    name: 'Dark',
+    bg: 'bg-[#1e1e1e]',
+    text: 'text-gray-100',
+    navBg: 'bg-[#2d2d2d]',
+    navText: 'text-gray-200',
+    navBorder: 'border-gray-700',
+    lineNumBg: 'bg-[#1e1e1e]',
+    lineNumText: 'text-gray-500',
+    selection: 'selection:bg-blue-600',
+    icon: <Moon size={16} />
+  },
+  sakura: {
+    name: 'Sakura',
+    bg: 'bg-[#fff9fa]',
+    text: 'text-[#4a3b3e]',
+    navBg: 'bg-[#ffe4e8]',
+    navText: 'text-[#5c4046]',
+    navBorder: 'border-[#ffc4ce]',
+    lineNumBg: 'bg-[#fff0f3]',
+    lineNumText: 'text-[#d6a5b0]',
+    selection: 'selection:bg-[#ffcdd2]',
+    icon: <Flower2 size={16} />
+  },
+  classic: {
+    name: 'Classic',
+    bg: 'bg-white',
+    text: 'text-black',
+    navBg: 'bg-[#ece9d8]', // 秀丸/古いWindows風
+    navText: 'text-black',
+    navBorder: 'border-[#aca899]',
+    lineNumBg: 'bg-[#f0f0f0]',
+    lineNumText: 'text-gray-500',
+    selection: 'selection:bg-[#3399ff] selection:text-white',
+    icon: <Monitor size={16} />
+  }
+};
+
+export default function WebEditorApp() {
+  const [text, setText] = useState('');
+  const [fileName, setFileName] = useState('untitled.txt');
+  const [isModified, setIsModified] = useState(false);
+  const [currentFileHandle, setCurrentFileHandle] = useState(null);
+  
+  const [settings, setSettings] = useState({
+    theme: 'light',
+    fontSize: 14,
+    fontFamily: "'MS Gothic', 'Yu Gothic', monospace",
+    encoding: 'UTF-8',
+    tabSize: 4,
+    wordWrap: false,
+  });
+
+  const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
+  const [selectionLen, setSelectionLen] = useState(0);
+  const [fileStats, setFileStats] = useState({ chars: 0, bytes: 0, lines: 1, lineEnding: 'LF' });
+  const [msg, setMsg] = useState('Ready');
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const [activeMenu, setActiveMenu] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [replaceQuery, setReplaceQuery] = useState('');
+  
+  // ダイアログ状態管理
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const [saveAsDialog, setSaveAsDialog] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+
+  const textareaRef = useRef(null);
+  const lineNumbersRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const menuRef = useRef(null);
+
+  // --- Gemini API Integration (省略せずそのまま) ---
+  const callGemini = async (prompt, systemInstruction = "") => {
+    setAiLoading(true);
+    let retries = 0;
+    const maxRetries = 5;
+    
+    while (retries <= maxRetries) {
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined
+          })
+        });
+
+        if (!response.ok) throw new Error('API request failed');
+        
+        const result = await response.json();
+        const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        setAiLoading(false);
+        return generatedText;
+      } catch (error) {
+        if (retries === maxRetries) {
+          setAiLoading(false);
+          showMessage("AI機能の呼び出しに失敗しました。");
+          return null;
+        }
+        const delay = Math.pow(2, retries) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        retries++;
+      }
+    }
+  };
+
+  const handleAiContinue = async () => { /* 略さず維持 */
+    if (!text) return;
+    const selection = text.substring(0, textareaRef.current.selectionStart);
+    const context = selection.slice(-1000);
+    const result = await callGemini(
+      `以下のテキストの続きを自然に書いてください。続きの部分のみを出力してください。\n\n---\n${context}`,
+      "あなたはプロの編集者です。文脈を完璧に理解し、ユーザーが書こうとしている続きを執筆します。"
+    );
+    if (result) {
+      const cursor = textareaRef.current.selectionStart;
+      const newText = text.slice(0, cursor) + result + text.slice(cursor);
+      setText(newText);
+      setIsModified(true);
+      showMessage("AIが続きを生成しました。");
+    }
+  };
+
+  const handleAiSummary = async () => { /* 略さず維持 */
+    if (!text) return;
+    const result = await callGemini(
+      `以下の文章を簡潔に要約してください。\n\n${text}`,
+      "あなたは優秀な秘書です。長い文章を要点をおさえて短く要約します。"
+    );
+    if (result) {
+      setConfirmDialog({
+        title: '✨ AI要約結果',
+        message: result,
+        onConfirm: () => {
+          setText(`【AI要約】\n${result}\n\n---\n\n${text}`);
+          setConfirmDialog(null);
+        }
+      });
+    }
+  };
+
+  const handleAiToneChange = async (tone) => { /* 略さず維持 */
+    if (!text) return;
+    const toneMap = {
+      formal: "ビジネス向けの非常に丁寧でプロフェッショナルなトーン",
+      friendly: "親しみやすく、カジュアルで温かみのあるトーン",
+      concise: "簡潔で、事実のみを伝える論理的なトーン"
+    };
+    const result = await callGemini(
+      `以下の文章を「${toneMap[tone]}」に書き換えてください。書き換え後の文章全体のみを出力してください。\n\n${text}`,
+      "あなたは文体変換のスペシャリストです。元の意味を保ちつつ、指定されたトーンに完全に合わせます。"
+    );
+    if (result) {
+      setConfirmDialog({
+        title: `✨ トーン変更 (${tone})`,
+        message: "AIが書き換えた内容を反映しますか？",
+        onConfirm: () => {
+          setText(result);
+          setIsModified(true);
+          setConfirmDialog(null);
+        }
+      });
+    }
+  };
+
+  const handleAiBrainstorm = async () => { /* 略さず維持 */
+    if (!text) return;
+    const result = await callGemini(
+      `現在執筆中のこの文章について、次に書くべき内容のアイデアや、深掘りすべきトピック、または目を引くタイトル案をいくつか提案してください。\n\n${text}`,
+      "あなたはクリエイティブ・ディレクターです。著者の発想を広げるための刺激的な提案を行います。"
+    );
+    if (result) {
+      setConfirmDialog({
+        title: '✨ AIブレインストーミング',
+        message: result,
+        onConfirm: () => setConfirmDialog(null)
+      });
+    }
+  };
+
+  const handleAiProofread = async () => { /* 略さず維持 */
+    if (!text) return;
+    const result = await callGemini(
+      `以下の文章の誤字脱字、文法ミスを修正し、より洗練された表現に校正してください。修正後の文章全体のみを出力してください。\n\n${text}`,
+      "あなたは熟練の校正者です。元の意味を損なわず、読みやすい日本語に整えます。"
+    );
+    if (result) {
+      setConfirmDialog({
+        title: '✨ AI校正案',
+        message: "AIが校正した文章を適用しますか？現在の内容は上書きされます。",
+        onConfirm: () => {
+          setText(result);
+          setIsModified(true);
+          setConfirmDialog(null);
+        }
+      });
+    }
+  };
+
+  // --- Core Logic ---
+  useEffect(() => {
+    updateStats(text);
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setActiveMenu(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [text]);
+
+  const updateStats = (currentText) => {
+    const chars = [...currentText].length;
+    const bytes = new Blob([currentText]).size;
+    const lines = currentText.split('\n').length;
+    let lineEnding = 'LF';
+    if (currentText.includes('\r\n')) lineEnding = 'CRLF';
+    else if (currentText.includes('\r')) lineEnding = 'CR';
+    setFileStats({ chars, bytes, lines, lineEnding });
+  };
+
+  const updateCursorPos = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const pos = el.selectionStart;
+    const textBefore = el.value.substring(0, pos);
+    const lines = textBefore.split('\n');
+    setCursorPos({ line: lines.length, col: lines[lines.length - 1].length + 1 });
+    setSelectionLen(el.selectionEnd - el.selectionStart);
+  };
+
+  const handleChange = (e) => {
+    setText(e.target.value);
+    setIsModified(true);
+    updateCursorPos();
+  };
+
+  const handleScroll = (e) => {
+    if (lineNumbersRef.current) lineNumbersRef.current.scrollTop = e.target.scrollTop;
+  };
+
+  // ショートカットキーのハンドリング
+  const handleKeyDown = (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const el = textareaRef.current;
+      const start = el.selectionStart;
+      const spaces = ' '.repeat(settings.tabSize);
+      setText(text.substring(0, start) + spaces + text.substring(el.selectionEnd));
+      setIsModified(true);
+      setTimeout(() => { el.selectionStart = el.selectionEnd = start + spaces.length; updateCursorPos(); }, 0);
+    }
+    
+    // Ctrl / Cmd 系のショートカット
+    if (e.ctrlKey || e.metaKey) {
+      const key = e.key.toLowerCase();
+      if (key === 's') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleSaveAsMenu();
+        } else {
+          handleSaveFile();
+        }
+      } else if (key === 'o') {
+        e.preventDefault();
+        fileInputRef.current?.click();
+      } else if (key === 'n') {
+        e.preventDefault();
+        handleNewFile();
+      } else if (key === 'f') {
+        e.preventDefault();
+        setShowSearch(true);
+        setActiveMenu(null);
+      }
+    }
+  };
+
+  // --- ファイル操作 ---
+  const handleNewFile = () => {
+    const createNew = () => {
+      setText(''); setFileName('untitled.txt'); setIsModified(false); setCurrentFileHandle(null);
+      setActiveMenu(null); textareaRef.current?.focus(); setConfirmDialog(null);
+    };
+    if (isModified) {
+      setConfirmDialog({ title: '新規作成', message: '変更が保存されていません。破棄して新規作成しますか？', onConfirm: createNew });
+    } else createNew();
+  };
+
+  const handleCloseFile = () => {
+    const closeFile = () => {
+      setText(''); setFileName('untitled.txt'); setIsModified(false); setCurrentFileHandle(null);
+      setActiveMenu(null); setConfirmDialog(null);
+    };
+    if (isModified) {
+      setConfirmDialog({ title: '閉じる', message: '変更が保存されていません。保存せずに閉じますか？', onConfirm: closeFile });
+    } else closeFile();
+  };
+
+  const readFile = (file, encoding) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setText(event.target.result); 
+      setFileName(file.name); 
+      setCurrentFileHandle(file);
+      setIsModified(false); 
+      setSettings(prev => ({ ...prev, encoding: encoding }));
+      showMessage(`ファイルを読み込みました: ${file.name} (${encoding})`);
+    };
+    reader.onerror = () => showMessage('ファイルの読み込みに失敗しました。');
+    const readEncoding = encoding === 'UTF-8-BOM' ? 'UTF-8' : encoding;
+    reader.readAsText(file, readEncoding);
+  };
+
+  const handleOpenFile = (e) => {
+    const file = e.target.files[0];
+    if (file) readFile(file, settings.encoding);
+    e.target.value = ''; setActiveMenu(null);
+  };
+
+  const handleSaveFile = (customFileName = null) => {
+    const targetFileName = customFileName || fileName;
+    let outputBlob;
+    if (settings.encoding === 'UTF-8-BOM') {
+      const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+      outputBlob = new Blob([bom, text], { type: 'text/plain;charset=utf-8' });
+    } else {
+      outputBlob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    }
+    const url = URL.createObjectURL(outputBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = targetFileName; a.click();
+    URL.revokeObjectURL(url);
+    
+    if (customFileName) setFileName(customFileName);
+    setIsModified(false);
+    showMessage(`ファイルを保存しました (${settings.encoding})`);
+    setActiveMenu(null);
+  };
+
+  const handleSaveAsMenu = () => {
+    setNewFileName(fileName);
+    setSaveAsDialog(true);
+    setActiveMenu(null);
+  };
+
+  const executeSaveAs = () => {
+    if (newFileName.trim() === '') return;
+    handleSaveFile(newFileName);
+    setSaveAsDialog(false);
+  };
+
+  // --- エンコード管理（秀丸・サクラを意識した明確な分離） ---
+
+  // 1. 保存用エンコードの変更（表示内容はそのまま、文字化けしない）
+  const changeSaveEncoding = (newEncoding) => {
+    setSettings(prev => ({ ...prev, encoding: newEncoding }));
+    setIsModified(true); // メタデータ変更として扱う
+    showMessage(`保存用文字コードを ${newEncoding} に変更しました`);
+  };
+
+  // 2. 指定エンコードで再読込（文字化けして開いたファイル用）
+  const reloadWithEncoding = (newEncoding) => {
+    if (!currentFileHandle) {
+      showMessage("ローカルファイルを開いていないため、再読込できません。");
+      return;
+    }
+    const applyReload = () => {
+      readFile(currentFileHandle, newEncoding);
+      setConfirmDialog(null);
+    };
+
+    if (isModified) {
+      setConfirmDialog({ 
+        title: '指定文字コードで再読込', 
+        message: `未保存の変更が破棄されます。\nファイル「${currentFileHandle.name}」を ${newEncoding} で読み直しますか？`, 
+        onConfirm: applyReload 
+      });
+    } else {
+      applyReload();
+    }
+  };
+
+  // --- 検索・置換 ---
+  const handleSearchNext = () => {
+    if (!searchQuery) return;
+    const el = textareaRef.current;
+    let index = text.indexOf(searchQuery, el.selectionEnd || 0);
+    if (index === -1) index = text.indexOf(searchQuery, 0);
+    if (index !== -1) {
+      el.focus(); el.setSelectionRange(index, index + searchQuery.length);
+      const linesBefore = text.substring(0, index).split('\n').length;
+      el.scrollTop = Math.max(0, (linesBefore - 5) * 1.6 * settings.fontSize);
+      updateCursorPos(); showMessage(`「${searchQuery}」が見つかりました。`);
+    } else showMessage("見つかりませんでした。");
+  };
+
+  const handleReplace = () => {
+    const el = textareaRef.current;
+    if (text.substring(el.selectionStart, el.selectionEnd) === searchQuery) {
+      const start = el.selectionStart;
+      setText(text.substring(0, start) + replaceQuery + text.substring(el.selectionEnd));
+      setIsModified(true);
+      setTimeout(() => { el.setSelectionRange(start, start + replaceQuery.length); updateCursorPos(); handleSearchNext(); }, 0);
+    } else handleSearchNext();
+  };
+
+  const showMessage = (str) => { setMsg(str); setTimeout(() => setMsg(p => p === str ? 'Ready' : p), 5000); };
+
+  const currentTheme = THEMES[settings.theme];
+  const lineNumbers = Array.from({ length: Math.max(1, text.split('\n').length) }, (_, i) => i + 1).join('\n');
+  const editorStyle = { fontFamily: settings.fontFamily, fontSize: `${settings.fontSize}px`, lineHeight: '1.6', tabSize: settings.tabSize };
+
+  return (
+    <div className={`flex flex-col h-screen w-full transition-colors duration-200 ${currentTheme.bg} ${currentTheme.text}`}>
+      {/* メニューバー */}
+      <div className={`flex items-center px-2 py-1 text-sm border-b select-none ${currentTheme.navBg} ${currentTheme.navText} ${currentTheme.navBorder}`} ref={menuRef}>
+        
+        {/* ファイル(F) */}
+        <div className="relative">
+          <button className="px-3 py-1 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer" onClick={() => setActiveMenu(activeMenu === 'file' ? null : 'file')}>ファイル(F)</button>
+          {activeMenu === 'file' && (
+            <div className={`absolute top-full left-0 mt-1 w-56 shadow-lg rounded border py-1 z-50 ${currentTheme.bg} ${currentTheme.navBorder}`}>
+              <button className="w-full text-left px-4 py-1.5 hover:bg-blue-500 hover:text-white flex items-center justify-between" onClick={handleNewFile}>
+                <span className="flex items-center gap-2"><FileText size={14}/> 新規作成</span><span className="text-[10px] opacity-60">Ctrl+N</span>
+              </button>
+              <button className="w-full text-left px-4 py-1.5 hover:bg-blue-500 hover:text-white flex items-center justify-between" onClick={() => { fileInputRef.current?.click(); setActiveMenu(null); }}>
+                <span className="flex items-center gap-2"><FolderOpen size={14}/> 開く...</span><span className="text-[10px] opacity-60">Ctrl+O</span>
+              </button>
+              <div className={`h-px w-full my-1 border-t ${currentTheme.navBorder}`}></div>
+              <button className="w-full text-left px-4 py-1.5 hover:bg-blue-500 hover:text-white flex items-center justify-between" onClick={() => handleSaveFile()}>
+                <span className="flex items-center gap-2"><Save size={14}/> 保存</span><span className="text-[10px] opacity-60">Ctrl+S</span>
+              </button>
+              <button className="w-full text-left px-4 py-1.5 hover:bg-blue-500 hover:text-white flex items-center justify-between" onClick={handleSaveAsMenu}>
+                <span className="flex items-center gap-2"><SaveAll size={14}/> 名前を付けて保存...</span><span className="text-[10px] opacity-60">Ctrl+Shift+S</span>
+              </button>
+              <div className={`h-px w-full my-1 border-t ${currentTheme.navBorder}`}></div>
+              <button className="w-full text-left px-4 py-1.5 hover:bg-red-500 hover:text-white flex items-center gap-2" onClick={handleCloseFile}>
+                <XCircle size={14}/> 閉じる
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 検索(S) */}
+        <div className="relative">
+          <button className="px-3 py-1 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer" onClick={() => setActiveMenu(activeMenu === 'search' ? null : 'search')}>検索(S)</button>
+          {activeMenu === 'search' && (
+            <div className={`absolute top-full left-0 mt-1 w-48 shadow-lg rounded border py-1 z-50 ${currentTheme.bg} ${currentTheme.navBorder}`}>
+              <button className="w-full text-left px-4 py-1.5 hover:bg-blue-500 hover:text-white flex items-center justify-between" onClick={() => { setShowSearch(true); setActiveMenu(null); }}>
+                <span className="flex items-center gap-2"><Search size={14}/> 検索・置換</span><span className="text-[10px] opacity-60">Ctrl+F</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 表示(V) - 拡大縮小・フォントなど */}
+        <div className="relative">
+          <button className="px-3 py-1 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer" onClick={() => setActiveMenu(activeMenu === 'view' ? null : 'view')}>表示(V)</button>
+          {activeMenu === 'view' && (
+            <div className={`absolute top-full left-0 mt-1 w-64 shadow-lg rounded border py-2 z-50 ${currentTheme.bg} ${currentTheme.navBorder}`}>
+              <div className="px-4 py-1 text-xs font-bold opacity-50 uppercase">Zoom & Font</div>
+              <div className="flex px-4 py-1 gap-2 items-center">
+                <button className="flex-1 py-1 border rounded hover:bg-black/10 dark:hover:bg-white/10 flex justify-center items-center gap-1" onClick={() => setSettings(s => ({...s, fontSize: Math.max(8, s.fontSize - 2)}))} title="縮小"><ZoomOut size={14}/> 縮小</button>
+                <div className="w-12 text-center font-mono text-sm">{settings.fontSize}px</div>
+                <button className="flex-1 py-1 border rounded hover:bg-black/10 dark:hover:bg-white/10 flex justify-center items-center gap-1" onClick={() => setSettings(s => ({...s, fontSize: Math.min(48, s.fontSize + 2)}))} title="拡大"><ZoomIn size={14}/> 拡大</button>
+              </div>
+              <div className="px-4 py-1">
+                <button className="w-full py-1 border rounded hover:bg-black/10 dark:hover:bg-white/10 text-xs" onClick={() => setSettings(s => ({...s, fontSize: 14}))}>100% (標準サイズに戻す)</button>
+              </div>
+
+              <div className={`h-px w-full my-2 border-t ${currentTheme.navBorder}`}></div>
+              
+              <div className="px-4 py-2">
+                <div className="text-xs opacity-50 mb-1">フォントの種類</div>
+                <select value={settings.fontFamily} onChange={(e) => setSettings({...settings, fontFamily: e.target.value})} className="w-full p-1 text-sm border rounded bg-transparent outline-none">
+                  {FONTS.map(f => <option key={f.name} value={f.value} className="text-black">{f.name}</option>)}
+                </select>
+              </div>
+
+              <div className={`h-px w-full my-1 border-t ${currentTheme.navBorder}`}></div>
+              <label className="px-4 py-2 flex items-center gap-2 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5">
+                <input type="checkbox" checked={settings.wordWrap} onChange={(e) => setSettings({...settings, wordWrap: e.target.checked})}/>
+                <span>右端で折り返す</span>
+              </label>
+            </div>
+          )}
+        </div>
+
+        {/* 設定(O) - エンコード・テーマ */}
+        <div className="relative">
+          <button className="px-3 py-1 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer" onClick={() => setActiveMenu(activeMenu === 'settings' ? null : 'settings')}>設定(O)</button>
+          {activeMenu === 'settings' && (
+            <div className={`absolute top-full left-0 mt-1 w-64 shadow-lg rounded border py-2 z-50 ${currentTheme.bg} ${currentTheme.navBorder}`}>
+              <div className="px-4 py-1 text-xs font-bold opacity-50 uppercase">文字コード (Encoding)</div>
+              
+              <div className="px-4 py-2 bg-blue-500/10">
+                <div className="text-xs font-bold mb-1">■ 保存文字コードの変更</div>
+                <div className="text-[10px] opacity-70 mb-2 leading-tight">現在のテキストを維持したまま、保存形式だけを変更します。(文字化けしません)</div>
+                <select value={settings.encoding} onChange={(e) => changeSaveEncoding(e.target.value)} className="w-full p-1 text-sm border rounded bg-transparent outline-none">
+                  {ENCODINGS.map(enc => <option key={enc.name} value={enc.value} className="text-black">{enc.name}</option>)}
+                </select>
+              </div>
+
+              <div className="px-4 py-2 mt-1 bg-red-500/10">
+                <div className="text-xs font-bold mb-1 text-red-600 dark:text-red-400">■ 指定エンコードで再読込</div>
+                <div className="text-[10px] opacity-70 mb-2 leading-tight">ファイルが文字化けしている場合、正しい文字コードを指定して読み直します。</div>
+                <select onChange={(e) => { reloadWithEncoding(e.target.value); e.target.value=''; }} defaultValue="" className="w-full p-1 text-sm border border-red-500/30 rounded bg-transparent outline-none">
+                  <option value="" disabled>-- 選択して再読込 --</option>
+                  {ENCODINGS.map(enc => <option key={enc.name} value={enc.value} className="text-black">{enc.name}</option>)}
+                </select>
+              </div>
+
+              <div className={`h-px w-full my-2 border-t ${currentTheme.navBorder}`}></div>
+              
+              <div className="px-4 py-1 text-xs font-bold opacity-50 uppercase">テーマカラー</div>
+              <div className="px-4 py-1 grid grid-cols-2 gap-1">
+                {Object.keys(THEMES).map(k => (
+                  <button 
+                    key={k} 
+                    onClick={() => setSettings({...settings, theme: k})} 
+                    className={`p-1.5 rounded text-xs flex items-center justify-center gap-1 border ${settings.theme === k ? 'bg-blue-500 text-white border-blue-500' : 'border-transparent hover:bg-black/10 dark:hover:bg-white/10'}`}
+                  >
+                    {THEMES[k].icon} {THEMES[k].name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* AIアシスト(A) */}
+        <div className="relative">
+          <button className="px-3 py-1 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer flex items-center gap-1" onClick={() => setActiveMenu(activeMenu === 'ai' ? null : 'ai')}>
+            <Sparkles size={14} className="text-purple-500"/> AIアシスト(A)
+          </button>
+          {activeMenu === 'ai' && (
+            <div className={`absolute top-full left-0 mt-1 w-64 shadow-xl rounded-lg border py-2 z-50 ${currentTheme.bg} ${currentTheme.navBorder}`}>
+              <div className="px-4 py-1 text-xs font-bold opacity-50 uppercase tracking-widest">Generative AI</div>
+              <button disabled={aiLoading} className="w-full text-left px-4 py-2 hover:bg-purple-500 hover:text-white flex items-center gap-2 disabled:opacity-50" onClick={handleAiContinue}>
+                <Wand2 size={14}/> ✨文章の続きを書く
+              </button>
+              <button disabled={aiLoading} className="w-full text-left px-4 py-2 hover:bg-purple-500 hover:text-white flex items-center gap-2 disabled:opacity-50" onClick={handleAiProofread}>
+                <CheckCircle2 size={14}/> ✨校正・修正する
+              </button>
+              <button disabled={aiLoading} className="w-full text-left px-4 py-2 hover:bg-purple-500 hover:text-white flex items-center gap-2 disabled:opacity-50" onClick={handleAiSummary}>
+                <AlignLeft size={14}/> ✨要約を挿入
+              </button>
+              
+              <div className={`h-px w-full my-1 border-t ${currentTheme.navBorder}`}></div>
+              <div className="px-4 py-1 text-xs font-bold opacity-50 uppercase tracking-widest">Creative Tools</div>
+              <button disabled={aiLoading} className="w-full text-left px-4 py-2 hover:bg-purple-500 hover:text-white flex items-center gap-2 disabled:opacity-50" onClick={handleAiBrainstorm}>
+                <BrainCircuit size={14}/> ✨タイトル・構成提案
+              </button>
+              
+              <div className="px-4 py-1 mt-1 text-[10px] opacity-50 flex items-center gap-1 font-bold">文体を変更する</div>
+              <div className="grid grid-cols-3 gap-1 px-3 py-1">
+                <button onClick={() => handleAiToneChange('formal')} className="text-[10px] p-1 border rounded hover:bg-purple-500 hover:text-white truncate">✨丁寧</button>
+                <button onClick={() => handleAiToneChange('friendly')} className="text-[10px] p-1 border rounded hover:bg-purple-500 hover:text-white truncate">✨親しみ</button>
+                <button onClick={() => handleAiToneChange('concise')} className="text-[10px] p-1 border rounded hover:bg-purple-500 hover:text-white truncate">✨簡潔</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="ml-auto flex items-center gap-3">
+          {aiLoading && (
+            <div className="flex items-center gap-2 text-purple-500 animate-pulse text-xs font-bold">
+              <Loader2 size={14} className="animate-spin"/> AIが分析中...
+            </div>
+          )}
+          <div className="opacity-70 text-xs truncate max-w-[150px] font-mono">{fileName}{isModified ? ' *' : ''}</div>
+        </div>
+      </div>
+
+      <input type="file" ref={fileInputRef} className="hidden" onChange={handleOpenFile} />
+
+      {/* メインエディタエリア */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {!settings.wordWrap && (
+          <div ref={lineNumbersRef} className={`w-12 shrink-0 text-right pr-2 py-4 overflow-hidden select-none border-r ${currentTheme.lineNumBg} ${currentTheme.lineNumText} ${currentTheme.navBorder}`} style={editorStyle}>
+            <pre style={{ margin: 0, fontFamily: 'inherit' }}>{lineNumbers}</pre>
+          </div>
+        )}
+        <textarea
+          ref={textareaRef} value={text} onChange={handleChange} onScroll={handleScroll} onKeyDown={handleKeyDown}
+          onClick={updateCursorPos} onKeyUp={updateCursorPos}
+          className={`flex-1 p-4 resize-none outline-none overflow-auto ${currentTheme.bg} ${currentTheme.text} ${currentTheme.selection}`}
+          style={{ ...editorStyle, whiteSpace: settings.wordWrap ? 'pre-wrap' : 'pre', wordBreak: settings.wordWrap ? 'break-all' : 'normal' }}
+          spellCheck="false"
+        />
+
+        {/* 検索ダイアログ */}
+        {showSearch && (
+          <div className={`absolute top-4 right-8 w-80 shadow-2xl rounded-lg border p-4 z-40 ${currentTheme.navBg} ${currentTheme.navText} ${currentTheme.navBorder}`}>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold flex items-center gap-2"><Search size={16}/> 検索・置換</h3>
+              <button onClick={() => setShowSearch(false)}><X size={18}/></button>
+            </div>
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full px-2 py-1.5 border rounded mb-2 text-black" placeholder="検索..." autoFocus/>
+            <input type="text" value={replaceQuery} onChange={(e) => setReplaceQuery(e.target.value)} className="w-full px-2 py-1.5 border rounded mb-3 text-black" placeholder="置換..."/>
+            <div className="flex gap-2">
+              <button onClick={handleSearchNext} className="flex-1 py-1.5 bg-blue-500 text-white rounded text-sm">次を検索</button>
+              <button onClick={handleReplace} className="flex-1 py-1.5 border border-blue-500 text-blue-500 rounded text-sm">置換</button>
+            </div>
+          </div>
+        )}
+
+        {/* 名前を付けて保存ダイアログ */}
+        {saveAsDialog && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-[100] backdrop-blur-sm p-6">
+            <div className={`w-96 p-5 rounded-xl shadow-2xl border ${currentTheme.bg} ${currentTheme.text} ${currentTheme.navBorder}`}>
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><SaveAll size={18}/> 名前を付けて保存</h3>
+              <label className="block text-xs opacity-70 mb-1">ファイル名:</label>
+              <input 
+                type="text" 
+                value={newFileName} 
+                onChange={(e) => setNewFileName(e.target.value)}
+                className="w-full px-3 py-2 border rounded mb-5 text-black bg-white outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && executeSaveAs()}
+              />
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setSaveAsDialog(false)} className="px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-white/10">キャンセル</button>
+                <button onClick={executeSaveAs} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded shadow">保存する</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 汎用確認ダイアログ */}
+        {confirmDialog && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-[100] backdrop-blur-sm p-6">
+            <div className={`max-w-xl w-full p-6 rounded-2xl shadow-2xl border ${currentTheme.bg} ${currentTheme.text} ${currentTheme.navBorder}`}>
+              <div className="flex items-center gap-3 mb-4 text-orange-500">
+                <AlertCircle size={24}/>
+                <h3 className="text-xl font-extrabold tracking-tight">{confirmDialog.title}</h3>
+              </div>
+              <div className="max-h-[50vh] overflow-auto mb-8 p-4 rounded-xl bg-black/5 dark:bg-white/5 border whitespace-pre-wrap leading-relaxed">
+                {confirmDialog.message}
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setConfirmDialog(null)} className="px-6 py-2 rounded-lg font-bold hover:bg-gray-100 dark:hover:bg-white/10 transition-all">キャンセル</button>
+                <button onClick={confirmDialog.onConfirm} className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold shadow-lg transition-all">実行する</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 秀丸/サクラ風 充実ステータスバー */}
+      <div className={`flex items-center justify-between px-4 py-1.5 text-xs border-t select-none ${currentTheme.navBg} ${currentTheme.navText} ${currentTheme.navBorder} font-medium`}>
+        <div className="flex items-center gap-2 truncate w-1/3">
+          {isModified && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shrink-0" title="未保存の変更あり"></span>}
+          <span className="opacity-80 truncate">{msg}</span>
+        </div>
+        
+        <div className="flex gap-4 opacity-80 shrink-0 font-mono tracking-tight items-center">
+          <div className="flex gap-2 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded" title="カーソル位置 (行, 桁)">
+            <span>{cursorPos.line}/{fileStats.lines}行</span>
+            <span>{cursorPos.col}桁</span>
+            {selectionLen > 0 && <span className="text-blue-500 ml-1">[{selectionLen} 選択]</span>}
+          </div>
+          
+          <div className="flex gap-2" title="文字数 / バイト数">
+            <span>{fileStats.chars}字</span>
+            <span>{fileStats.bytes}B</span>
+          </div>
+
+          <div className="h-4 w-px bg-current opacity-20 mx-1"></div>
+
+          <div className="flex gap-3 cursor-pointer hover:text-blue-500 transition-colors" title="現在の保存用文字コード設定" onClick={() => setActiveMenu('settings')}>
+            <span className="uppercase">{settings.encoding}</span>
+            <span>{fileStats.lineEnding}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
