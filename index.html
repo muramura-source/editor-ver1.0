@@ -571,8 +571,13 @@
         let index = text.indexOf(query, startIndex);
         if (index === -1) index = text.indexOf(query, 0);
         if (index !== -1) {
-            editor.focus();
+            // FIX: Only focus the editor if we are NOT typing in the search box
+            if (!isFromInput) {
+                editor.focus();
+            }
             editor.setSelectionRange(index, index + query.length);
+            
+            // Scroll into view
             const lineHeight = parseFloat(getComputedStyle(editor).lineHeight);
             const linesBefore = text.substring(0, index).split('\n').length;
             editorWrapper.scrollTop = (linesBefore - 5) * lineHeight; 
