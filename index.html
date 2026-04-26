@@ -825,8 +825,15 @@
         let content = '';
         for (let i = 1; i <= lines; i++) content += i + '\n';
         lineNumbers.textContent = content;
+        
+        // --- 修正箇所: スクロール位置の保存と復元 ---
+        const currentScrollTop = editorWrapper.scrollTop;
+        
         editor.style.height = 'auto'; 
         editor.style.height = Math.max(editorWrapper.clientHeight, editor.scrollHeight) + 'px';
+        
+        editorWrapper.scrollTop = currentScrollTop;
+        // ------------------------------------------
     }
 
     function updateStatus() {
