@@ -19,6 +19,8 @@
             --danger-color: #dc3545;
             --success-color: #28a745;
             --search-bg: #fff3cd;
+            --tab-active-bg: #ffffff;
+            --tab-inactive-bg: #e9ecef;
         }
 
         * {
@@ -59,6 +61,49 @@
 
         .tool-group:last-child {
             border-right: none;
+        }
+
+        /* Tabs */
+        .tab-bar {
+            background-color: var(--tab-inactive-bg);
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 6px 12px;
+            border-right: 1px solid var(--border-color);
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 200px;
+            min-width: 100px;
+            transition: background 0.2s;
+        }
+
+        .tab.active {
+            background-color: var(--tab-active-bg);
+            font-weight: 600;
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .tab-close {
+            margin-left: auto;
+            opacity: 0.5;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tab-close:hover {
+            background-color: #ddd;
+            opacity: 1;
         }
 
         .filename-container {
@@ -214,6 +259,22 @@
             margin-top: 20px;
         }
         .btn-danger { background: var(--danger-color); color: white; border: none; }
+
+        /* Drop Zone */
+        #drop-zone {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 123, 255, 0.1);
+            border: 3px dashed var(--accent-color);
+            z-index: 2000;
+            pointer-events: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -221,20 +282,20 @@
 <div class="toolbar">
     <!-- File Ops -->
     <div class="tool-group">
-        <button onclick="requestNewFile()" title="新規作成">
+        <button onclick="createNewTab()" title="新規タブ">
             <i data-lucide="file-plus" style="width:14px; height:14px"></i>
         </button>
         <button onclick="document.getElementById('fileInput').click()" title="ファイルを開く">
             <i data-lucide="folder-open" style="width:14px; height:14px"></i>
         </button>
-        <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(event)">
+        <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(event)" multiple>
         
         <div class="filename-container">
             <i data-lucide="file-text" style="width:14px; color:#666"></i>
-            <input type="text" id="fileNameInput" placeholder="ファイル名..." value="untitled.txt">
+            <input type="text" id="fileNameInput" placeholder="ファイル名..." oninput="updateTabNameFromInput(this.value)">
         </div>
 
-        <button onclick="saveFile()" title="保存" class="btn-primary">
+        <button onclick="saveFile()" title="名前を付けて保存 (Ctrl+S)" class="btn-primary">
             <i data-lucide="save" style="width:14px; height:14px"></i>
         </button>
     </div>
@@ -315,7 +376,12 @@
     </div>
 </div>
 
+<div class="tab-bar" id="tab-bar">
+    <!-- Tabs will be rendered here -->
+</div>
+
 <div class="main-container">
+    <div id="drop-zone">ファイルをドロップして開く</div>
     <div class="line-numbers" id="line-numbers">1</div>
     <div class="editor-wrapper" id="editor-wrapper">
         <div id="line-highlight" class="current-line-highlight"></div>
@@ -343,54 +409,162 @@
 </div>
 
 <script>
-    // Global state
+    // Global Elements
     const editor = document.getElementById('editor');
     const lineNumbers = document.getElementById('line-numbers');
     const editorWrapper = document.getElementById('editor-wrapper');
-    const statusBar = document.getElementById('cursor-pos');
+    const statusBarPos = document.getElementById('cursor-pos');
     const charCountDisplay = document.getElementById('char-count');
     const encDisplay = document.getElementById('current-enc-display');
     const fileInfo = document.getElementById('file-info');
     const undoBtn = document.getElementById('undoBtn');
     const redoBtn = document.getElementById('redoBtn');
     const fileNameInput = document.getElementById('fileNameInput');
+    const tabBar = document.getElementById('tab-bar');
     
-    let currentRawData = null; 
-    
-    // History Management
-    let history = [];
-    let historyIndex = -1;
     const MAX_HISTORY = 100;
 
+    // Multi-tab state
+    let tabs = [];
+    let activeTabId = null;
+
+    function createNewTab(name = "untitled.txt", content = "", encoding = "UTF8", raw = null) {
+        const id = Date.now() + Math.random().toString(36).substr(2, 9);
+        const newTab = {
+            id,
+            name,
+            content,
+            encoding,
+            rawData: raw,
+            history: [{ value: content, cursor: 0 }],
+            historyIndex: 0,
+            scrollPos: 0
+        };
+        tabs.push(newTab);
+        renderTabs();
+        switchTab(id);
+    }
+
+    function renderTabs() {
+        tabBar.innerHTML = '';
+        tabs.forEach(tab => {
+            const div = document.createElement('div');
+            div.className = `tab ${tab.id === activeTabId ? 'active' : ''}`;
+            div.onclick = () => switchTab(tab.id);
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = tab.name;
+            
+            const closeBtn = document.createElement('div');
+            closeBtn.className = 'tab-close';
+            closeBtn.innerHTML = '×';
+            closeBtn.onclick = (e) => {
+                e.stopPropagation();
+                closeTab(tab.id);
+            };
+            
+            div.appendChild(nameSpan);
+            div.appendChild(closeBtn);
+            tabBar.appendChild(div);
+        });
+    }
+
+    function switchTab(id) {
+        if (activeTabId === id) return;
+        
+        // Save current tab state
+        if (activeTabId) {
+            const currentTab = tabs.find(t => t.id === activeTabId);
+            if (currentTab) {
+                currentTab.content = editor.value;
+                currentTab.scrollPos = editorWrapper.scrollTop;
+                currentTab.encoding = document.getElementById('encoding').value;
+            }
+        }
+
+        activeTabId = id;
+        const nextTab = tabs.find(t => t.id === activeTabId);
+        if(!nextTab) return;
+        
+        // Restore next tab state
+        editor.value = nextTab.content;
+        fileNameInput.value = nextTab.name;
+        document.getElementById('encoding').value = nextTab.encoding;
+        
+        renderTabs();
+        updateLineNumbers();
+        updateStatus();
+        updateUndoButtons();
+        
+        editorWrapper.scrollTop = nextTab.scrollPos;
+        updateEncodingDisplay(nextTab.encoding);
+    }
+
+    function closeTab(id) {
+        const index = tabs.findIndex(t => t.id === id);
+        if (tabs.length === 1) {
+            // もし最後のタブなら内容をクリアするだけ
+            tabs[0].content = "";
+            tabs[0].name = "untitled.txt";
+            tabs[0].history = [{value: "", cursor: 0}];
+            tabs[0].historyIndex = 0;
+            tabs[0].rawData = null;
+            switchTab(tabs[0].id);
+            return;
+        }
+        
+        tabs = tabs.filter(t => t.id !== id);
+        if (activeTabId === id) {
+            switchTab(tabs[Math.max(0, index - 1)].id);
+        } else {
+            renderTabs();
+        }
+    }
+
+    function updateTabNameFromInput(name) {
+        const tab = tabs.find(t => t.id === activeTabId);
+        if (tab) {
+            tab.name = name || "untitled.txt";
+            renderTabs();
+        }
+    }
+
+    // History Management
     function saveToHistory() {
+        const tab = tabs.find(t => t.id === activeTabId);
+        if (!tab) return;
+
         const state = {
             value: editor.value,
             cursor: editor.selectionStart
         };
-        if (historyIndex >= 0 && history[historyIndex].value === state.value) return;
-        history = history.slice(0, historyIndex + 1);
-        history.push(state);
-        if (history.length > MAX_HISTORY) history.shift();
-        historyIndex = history.length - 1;
+        if (tab.historyIndex >= 0 && tab.history[tab.historyIndex].value === state.value) return;
+        
+        tab.history = tab.history.slice(0, tab.historyIndex + 1);
+        tab.history.push(state);
+        if (tab.history.length > MAX_HISTORY) tab.history.shift();
+        tab.historyIndex = tab.history.length - 1;
         updateUndoButtons();
     }
 
     function undo() {
-        if (historyIndex > 0) {
-            historyIndex--;
-            applyHistoryState();
+        const tab = tabs.find(t => t.id === activeTabId);
+        if (tab && tab.historyIndex > 0) {
+            tab.historyIndex--;
+            applyHistoryState(tab);
         }
     }
 
     function redo() {
-        if (historyIndex < history.length - 1) {
-            historyIndex++;
-            applyHistoryState();
+        const tab = tabs.find(t => t.id === activeTabId);
+        if (tab && tab.historyIndex < tab.history.length - 1) {
+            tab.historyIndex++;
+            applyHistoryState(tab);
         }
     }
 
-    function applyHistoryState() {
-        const state = history[historyIndex];
+    function applyHistoryState(tab) {
+        const state = tab.history[tab.historyIndex];
         editor.value = state.value;
         editor.focus();
         editor.setSelectionRange(state.cursor, state.cursor);
@@ -400,12 +574,14 @@
     }
 
     function updateUndoButtons() {
-        undoBtn.disabled = (historyIndex <= 0);
-        redoBtn.disabled = (historyIndex >= history.length - 1);
+        const tab = tabs.find(t => t.id === activeTabId);
+        if(!tab) return;
+        undoBtn.disabled = (tab.historyIndex <= 0);
+        redoBtn.disabled = (tab.historyIndex >= tab.history.length - 1);
     }
 
     /**
-     * Excel Formula Formatter
+     * Excel Formula Formatter (Original Logic)
      */
     function formatExcelFormula() {
         const formula = editor.value.trim();
@@ -492,7 +668,7 @@
     }
 
     /**
-     * Unformat Excel Formula
+     * Unformat Excel Formula (Original Logic)
      */
     function unformatExcelFormula() {
         const formula = editor.value;
@@ -530,13 +706,29 @@
     editor.addEventListener('input', () => {
         updateLineNumbers();
         updateStatus();
-        currentRawData = null; 
+        const tab = tabs.find(t => t.id === activeTabId);
+        if (tab) tab.rawData = null;
         clearTimeout(inputTimeout);
         inputTimeout = setTimeout(saveToHistory, 500);
     });
 
     editorWrapper.addEventListener('scroll', () => {
         lineNumbers.scrollTop = editorWrapper.scrollTop;
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key.toLowerCase()) {
+                case 's': e.preventDefault(); saveFile(); break;
+                case 'z': e.preventDefault(); e.shiftKey ? redo() : undo(); break;
+                case 'y': e.preventDefault(); redo(); break;
+                case 'f': 
+                    e.preventDefault(); 
+                    document.getElementById('searchInput').focus(); 
+                    break;
+            }
+        }
     });
 
     editor.addEventListener('keydown', (e) => {
@@ -550,9 +742,6 @@
             updateLineNumbers();
             saveToHistory();
         }
-        if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
-        if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) { e.preventDefault(); redo(); }
-        if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveFile(); }
     });
 
     ['click', 'keyup', 'focus'].forEach(evt => {
@@ -645,94 +834,72 @@
         const linesBefore = text.substring(0, pos).split('\n');
         const line = linesBefore.length;
         const col = linesBefore[line - 1].length + 1;
-        statusBar.textContent = `行: ${line}, 列: ${col}`;
+        statusBarPos.textContent = `行: ${line}, 列: ${col}`;
         charCountDisplay.textContent = `文字数: ${text.length}`;
         const lineHeight = parseFloat(getComputedStyle(editor).lineHeight);
         document.getElementById('line-highlight').style.top = `${(line - 1) * lineHeight + 10}px`;
         document.getElementById('line-highlight').style.height = `${lineHeight}px`;
     }
 
-    function requestNewFile() {
-        if (editor.value.length > 0) {
-            showConfirmModal("新規作成", "現在の内容を破棄して新しく作成しますか？", executeNewFile);
-        } else {
-            executeNewFile();
+    // Drag and Drop
+    const dropZone = document.getElementById('drop-zone');
+    window.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.display = 'flex';
+    });
+    window.addEventListener('dragleave', (e) => {
+        if (e.relatedTarget === null) dropZone.style.display = 'none';
+    });
+    window.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        dropZone.style.display = 'none';
+        const files = Array.from(e.dataTransfer.files);
+        for (const file of files) {
+            await readFile(file);
         }
-    }
-
-    function executeNewFile() {
-        editor.value = "";
-        currentRawData = null;
-        fileNameInput.value = "untitled.txt";
-        fileInfo.textContent = "新規作成";
-        document.getElementById('encoding').value = "UTF8";
-        encDisplay.textContent = "UTF-8";
-        history = []; historyIndex = -1;
-        saveToHistory();
-        updateLineNumbers();
-        updateStatus();
-        closeModal();
-    }
+    });
 
     async function handleFileSelect(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        fileNameInput.value = file.name;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            currentRawData = new Uint8Array(e.target.result);
-            let detected = Encoding.detect(currentRawData);
-            
-            // Map detected to notepad styles
-            let target = 'UTF8';
-            if (detected === 'SJIS') target = 'SJIS';
-            else if (detected === 'UTF16LE') target = 'UTF16LE';
-            else if (detected === 'UTF16BE') target = 'UTF16BE';
-            else if (detected === 'UTF8') {
-                // Check for BOM
-                if (currentRawData[0] === 0xEF && currentRawData[1] === 0xBB && currentRawData[2] === 0xBF) {
-                    target = 'UTF8BOM';
-                }
-            }
-            
-            document.getElementById('encoding').value = target;
-            applyEncoding(target);
-            saveToHistory();
-        };
-        reader.readAsArrayBuffer(file);
+        const files = Array.from(event.target.files);
+        for (const file of files) {
+            await readFile(file);
+        }
         event.target.value = ''; 
     }
 
-    function applyEncoding(targetEnc) {
-        if (!currentRawData) return;
-        try {
-            let fromEnc = targetEnc;
-            if (targetEnc === 'UTF8BOM') fromEnc = 'UTF8';
-            
-            const unicodeArray = Encoding.convert(currentRawData, { to: 'UNICODE', from: fromEnc });
-            let text = Encoding.codeToString(unicodeArray);
-            
-            // Strip BOM for display
-            if (text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
-            
-            editor.value = text;
-            
-            // Display label matching Notepad selection
-            const labelMap = {
-                'SJIS': 'ANSI (Shift_JIS)',
-                'UTF16LE': 'UTF-16 LE',
-                'UTF16BE': 'UTF-16 BE',
-                'UTF8': 'UTF-8',
-                'UTF8BOM': 'UTF-8 (BOM 付き)'
+    function readFile(file) {
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const raw = new Uint8Array(e.target.result);
+                let detected = Encoding.detect(raw);
+                
+                let target = 'UTF8';
+                if (detected === 'SJIS') target = 'SJIS';
+                else if (detected === 'UTF16LE') target = 'UTF16LE';
+                else if (detected === 'UTF16BE') target = 'UTF16BE';
+                else if (detected === 'UTF8') {
+                    if (raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF) {
+                        target = 'UTF8BOM';
+                    }
+                }
+                
+                let fromEnc = target;
+                if (target === 'UTF8BOM') fromEnc = 'UTF8';
+                
+                const unicodeArray = Encoding.convert(raw, { to: 'UNICODE', from: fromEnc });
+                let text = Encoding.codeToString(unicodeArray);
+                
+                if (text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
+                
+                createNewTab(file.name, text, target, raw);
+                resolve();
             };
-            encDisplay.textContent = labelMap[targetEnc] || 'UTF-8';
-            
-            updateLineNumbers(); updateStatus();
-        } catch (e) { showAlertModal("エラー", "文字コードの変換に失敗しました。"); }
+            reader.readAsArrayBuffer(file);
+        });
     }
 
-    function changeEncoding() {
-        const enc = document.getElementById('encoding').value;
+    function updateEncodingDisplay(targetEnc) {
         const labelMap = {
             'SJIS': 'ANSI (Shift_JIS)',
             'UTF16LE': 'UTF-16 LE',
@@ -740,14 +907,48 @@
             'UTF8': 'UTF-8',
             'UTF8BOM': 'UTF-8 (BOM 付き)'
         };
-        if (currentRawData) { applyEncoding(enc); saveToHistory(); }
-        else encDisplay.textContent = labelMap[enc] || 'UTF-8';
+        encDisplay.textContent = labelMap[targetEnc] || 'UTF-8';
     }
 
-    function saveFile() {
+    function applyEncoding(targetEnc) {
+        const tab = tabs.find(t => t.id === activeTabId);
+        if (!tab || !tab.rawData) return;
+        try {
+            let fromEnc = targetEnc;
+            if (targetEnc === 'UTF8BOM') fromEnc = 'UTF8';
+            
+            const unicodeArray = Encoding.convert(tab.rawData, { to: 'UNICODE', from: fromEnc });
+            let text = Encoding.codeToString(unicodeArray);
+            
+            if (text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
+            
+            editor.value = text;
+            tab.encoding = targetEnc;
+            updateEncodingDisplay(targetEnc);
+            updateLineNumbers(); updateStatus();
+        } catch (e) { showAlertModal("エラー", "文字コードの変換に失敗しました。"); }
+    }
+
+    function changeEncoding() {
+        const enc = document.getElementById('encoding').value;
+        const tab = tabs.find(t => t.id === activeTabId);
+        if (tab && tab.rawData) { 
+            applyEncoding(enc); 
+            saveToHistory(); 
+        } else { 
+            updateEncodingDisplay(enc);
+            if(tab) tab.encoding = enc;
+        }
+    }
+
+    // Save File using File System Access API
+    async function saveFile() {
+        const tab = tabs.find(t => t.id === activeTabId);
+        if (!tab) return;
+
         const text = editor.value;
         const targetEnc = document.getElementById('encoding').value;
-        const filename = fileNameInput.value || "untitled.txt";
+        const currentName = fileNameInput.value || "untitled.txt";
         const unicodeArray = Encoding.stringToCode(text);
         
         let toEnc = targetEnc;
@@ -755,7 +956,7 @@
         
         let encodedArray = Encoding.convert(unicodeArray, { to: toEnc, from: 'UNICODE' });
         
-        // Handle BOM for UTF-8 (BOM付き)
+        // Handle BOM
         if (targetEnc === 'UTF8BOM') {
             const bom = [0xEF, 0xBB, 0xBF];
             const newArray = new Uint8Array(bom.length + encodedArray.length);
@@ -763,7 +964,6 @@
             newArray.set(encodedArray, bom.length);
             encodedArray = newArray;
         } 
-        // Handle BOM for UTF-16 styles if not already present
         else if (targetEnc === 'UTF16LE' && (encodedArray[0] !== 0xFF || encodedArray[1] !== 0xFE)) {
             const bom = [0xFF, 0xFE];
             const newArray = new Uint8Array(bom.length + encodedArray.length);
@@ -778,10 +978,42 @@
         }
 
         const blob = new Blob([new Uint8Array(encodedArray)], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = filename; a.click();
-        URL.revokeObjectURL(url);
+
+        // Use File System Access API if supported
+        if ('showSaveFilePicker' in window) {
+            try {
+                const options = {
+                    suggestedName: currentName,
+                    types: [{
+                        description: 'テキストファイル',
+                        accept: {'text/plain': ['.txt', '.csv', '.html', '.css', '.js', '.json']}
+                    }],
+                };
+                const handle = await window.showSaveFilePicker(options);
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                
+                // Update tab name on successful save
+                fileNameInput.value = handle.name;
+                updateTabNameFromInput(handle.name);
+                fileInfo.textContent = "保存完了: " + handle.name;
+                setTimeout(() => { fileInfo.textContent = "準備完了"; }, 3000);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error(err);
+                    showAlertModal("エラー", "ファイルの保存に失敗しました。");
+                }
+            }
+        } else {
+            // Fallback for older browsers
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = currentName; a.click();
+            URL.revokeObjectURL(url);
+            fileInfo.textContent = "ダウンロード完了";
+            setTimeout(() => { fileInfo.textContent = "準備完了"; }, 3000);
+        }
     }
 
     function showConfirmModal(title, body, onConfirm) {
@@ -803,7 +1035,10 @@
 
     function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
 
-    window.addEventListener('load', () => { updateStyle(); updateStatus(); saveToHistory(); });
+    window.addEventListener('load', () => { 
+        createNewTab();
+        updateStyle(); 
+    });
 </script>
 
 </body>
