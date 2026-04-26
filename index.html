@@ -193,7 +193,7 @@
         .editor-wrapper {
             flex: 1;
             position: relative;
-            overflow: auto;
+            overflow: auto; /* 外側のコンテナでスクロールを制御 */
         }
 
         #editor {
@@ -208,6 +208,7 @@
             line-height: 1.5;
             tab-size: 4;
             display: block;
+            overflow: hidden; /* 二重スクロールバー防止：内側のスクロールバーを非表示にする */
         }
 
         /* Status Bar */
