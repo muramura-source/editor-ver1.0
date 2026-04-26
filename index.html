@@ -4,369 +4,427 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Web Editor</title>
-    <!-- encoding-japanese library for robust charset handling -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.2.0/encoding.min.js"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
-            --bg-color: #f8f9fa;
+            --bg:        #f0f2f5;
             --editor-bg: #ffffff;
-            --text-color: #212529;
-            --border-color: #dee2e6;
-            --sidebar-bg: #e9ecef;
-            --accent-color: #007bff;
-            --danger-color: #dc3545;
-            --success-color: #28a745;
-            --search-bg: #fff3cd;
-            --tab-active-bg: #ffffff;
-            --tab-inactive-bg: #e9ecef;
+            --text:      #1a1d23;
+            --border:    #d1d5db;
+            --accent:    #2563eb;
+            --accent-h:  #1d4ed8;
+            --danger:    #dc2626;
+            --success:   #16a34a;
+            --ln-bg:     #f7f8fa;
+            --ln-fg:     #aaa;
+            --hl-line:   rgba(37,99,235,0.045);
+            --g80:       rgba(255,140,0,0.25);
+            --g120:      rgba(220,0,0,0.18);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* Toolbar Styles */
+        /* ── TOOLBAR ────────────────────────────────────────────── */
         .toolbar {
-            background-color: var(--sidebar-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 5px 15px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            z-index: 100;
-        }
-
-        .tool-group {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding-right: 12px;
-            border-right: 1px solid var(--border-color);
-        }
-
-        .tool-group:last-child {
-            border-right: none;
-        }
-
-        /* Tabs */
-        .tab-bar {
-            background-color: var(--tab-inactive-bg);
-            display: flex;
-            border-bottom: 1px solid var(--border-color);
-            overflow-x: auto;
-        }
-
-        .tab {
-            padding: 6px 12px;
-            border-right: 1px solid var(--border-color);
-            cursor: pointer;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            max-width: 200px;
-            min-width: 100px;
-            transition: background 0.2s;
-        }
-
-        .tab.active {
-            background-color: var(--tab-active-bg);
-            font-weight: 600;
-            border-bottom: 2px solid var(--accent-color);
-        }
-
-        .tab-close {
-            margin-left: auto;
-            opacity: 0.5;
-            border-radius: 50%;
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .tab-close:hover {
-            background-color: #ddd;
-            opacity: 1;
-        }
-
-        .filename-container {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            background: #fff;
-            padding: 2px 8px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-
-        .filename-container input {
-            border: none;
-            outline: none;
-            font-size: 13px;
-            width: 150px;
-            font-weight: 500;
-        }
-
-        .search-panel {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            background: #fff;
-            padding: 2px 8px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-
-        .search-panel input {
-            border: none;
-            outline: none;
-            font-size: 13px;
-            width: 110px;
-        }
-
-        select, button {
+            background: linear-gradient(180deg, #f5f7fa, #e8eaed);
+            border-bottom: 1px solid var(--border);
             padding: 4px 8px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            background: white;
-            font-size: 13px;
-            cursor: pointer;
             display: flex;
             align-items: center;
+            gap: 2px;
+            flex-wrap: wrap;
+            min-height: 42px;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .tsep { width: 1px; height: 22px; background: var(--border); margin: 0 5px; flex-shrink: 0; }
+        .tgroup { display: flex; align-items: center; gap: 2px; }
+
+        .tbtn {
+            padding: 4px 7px;
+            border-radius: 5px;
+            border: 1px solid transparent;
+            background: transparent;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
             gap: 4px;
+            color: var(--text);
+            white-space: nowrap;
+            transition: background .12s, border-color .12s, color .12s;
+            line-height: 1;
+        }
+        .tbtn svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .tbtn:hover:not(:disabled) { background: rgba(0,0,0,.08); border-color: var(--border); }
+        .tbtn:disabled  { opacity: .4; cursor: not-allowed; }
+        .tbtn.active    { background: #dbeafe; border-color: #93c5fd; color: var(--accent-h); }
+        .tbtn.primary   { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .tbtn.primary:hover { background: var(--accent-h); }
+        .tbtn.success   { background: var(--success); color: #fff; border-color: var(--success); }
+        .tbtn.success:hover { background: #15803d; }
+
+        .fname-wrap {
+            display: flex; align-items: center; gap: 4px;
+            background: #fff; padding: 3px 8px;
+            border-radius: 5px; border: 1px solid var(--border);
+        }
+        .fname-wrap input {
+            border: none; outline: none; font-size: 13px;
+            width: 155px; background: transparent; font-weight: 500;
         }
 
-        button:hover {
-            background: #f0f0f0;
+        .srch-wrap {
+            display: flex; align-items: center; gap: 2px;
+            background: #fff; padding: 2px 5px;
+            border-radius: 5px; border: 1px solid var(--border);
+        }
+        .srch-wrap input { border: none; outline: none; font-size: 12px; width: 110px; background: transparent; }
+        .srch-counter { font-size: 11px; color: #999; min-width: 48px; text-align: right; }
+        .srch-counter.no-match { color: #e44; }
+        .srch-sep { width: 1px; height: 15px; background: #ddd; margin: 0 2px; }
+
+        select {
+            padding: 4px 5px; border-radius: 5px;
+            border: 1px solid var(--border); background: #fff;
+            font-size: 12px; cursor: pointer; color: var(--text);
         }
 
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-primary { background: var(--accent-color); color: white; border: none; }
-        .btn-success { background: var(--success-color); color: white; border: none; }
-        .btn-outline { background: white; color: var(--text-color); border: 1px solid var(--border-color); }
-
-        /* Editor Area */
-        .main-container {
-            flex: 1;
+        /* ── TABS ───────────────────────────────────────────────── */
+        .tab-bar {
+            background: #e8eaed;
             display: flex;
-            position: relative;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            scrollbar-width: thin;
+            flex-shrink: 0;
+        }
+        .tab {
+            padding: 5px 10px;
+            border-right: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 12.5px;
+            display: flex; align-items: center; gap: 5px;
+            min-width: 90px; max-width: 180px;
             overflow: hidden;
-            background-color: var(--editor-bg);
+            transition: background .12s;
+            user-select: none; flex-shrink: 0;
+        }
+        .tab:hover { background: rgba(0,0,0,.06); }
+        .tab.active { background: #fff; border-bottom: 2px solid var(--accent); font-weight: 600; }
+        .tab.drag-over { background: #dbeafe; }
+        .tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .tab-dirty { color: #f59e0b; font-size: 9px; flex-shrink: 0; }
+        .tab-close {
+            width: 15px; height: 15px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; line-height: 1; opacity: .45; flex-shrink: 0;
+        }
+        .tab-close:hover { background: #bbb; opacity: 1; }
+
+        /* ── MAIN CONTAINER ─────────────────────────────────────── */
+        .main-container {
+            flex: 1; display: flex; position: relative; overflow: hidden;
+            background: var(--editor-bg);
         }
 
+        /* Change gutter (left of line numbers) */
+        #gutter-wrap {
+            width: 5px;
+            overflow: hidden;
+            background: var(--ln-bg);
+            flex-shrink: 0;
+        }
+        #gutter-inner {
+            width: 5px;
+            position: relative;
+            min-height: 100%;
+        }
+
+        /* Line numbers */
         .line-numbers {
-            width: 60px;
-            padding: 10px 5px;
-            background-color: #f0f0f0;
-            border-right: 1px solid var(--border-color);
+            width: 54px;
+            padding: 10px 4px 10px 0;
+            background: var(--ln-bg);
+            border-right: 1px solid #e5e7eb;
             text-align: right;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
-            color: #999;
+            font-size: 14px; line-height: 1.5;
+            color: var(--ln-fg);
             user-select: none;
-            overflow: hidden;
-            white-space: pre;
-            line-height: 1.5;
+            overflow: hidden; white-space: pre;
+            cursor: pointer;
+            flex-shrink: 0;
         }
 
-        .editor-wrapper {
-            flex: 1;
-            position: relative;
-            overflow: auto; /* 外側のコンテナでスクロールを制御 */
+        /* Editor wrapper */
+        .editor-wrapper { flex: 1; position: relative; overflow: auto; }
+
+        /* Column guides */
+        .col-guide {
+            position: absolute; top: 0; bottom: 0; width: 1px;
+            pointer-events: none; z-index: 3; display: none;
+        }
+        #guide-80  { background: var(--g80); }
+        #guide-120 { background: var(--g120); }
+
+        /* Current line highlight */
+        #line-hl {
+            position: absolute; left: 0; right: 0;
+            background: var(--hl-line);
+            pointer-events: none; z-index: 2;
         }
 
         #editor {
-            width: 100%;
-            min-height: 100%;
+            position: relative; z-index: 4;
+            width: 100%; min-height: 100%;
             padding: 10px;
-            border: none;
-            outline: none;
-            resize: none;
+            border: none; outline: none; resize: none;
             white-space: pre;
             background: transparent;
             line-height: 1.5;
             tab-size: 4;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            color: var(--text);
+            caret-color: var(--accent);
             display: block;
-            overflow: hidden; /* 二重スクロールバー防止：内側のスクロールバーを非表示にする */
+            overflow: hidden;
         }
 
-        /* Status Bar */
-        .status-bar {
-            background-color: var(--sidebar-bg);
-            border-top: 1px solid var(--border-color);
-            padding: 2px 15px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            color: #666;
+        /* ── STATUS BAR ─────────────────────────────────────────── */
+        .statusbar {
+            background: linear-gradient(180deg, #e8eaed, #dde0e4);
+            border-top: 1px solid var(--border);
+            padding: 2px 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 11.5px; color: #555;
+            height: 23px; flex-shrink: 0; user-select: none;
         }
+        .sb-right { display: flex; }
+        .sb-item  { padding: 0 9px; border-left: 1px solid #ccc; }
+        .sb-item:first-child { border-left: none; }
+        .sb-item.click:hover { background: rgba(0,0,0,.06); cursor: pointer; }
 
-        .status-item {
-            margin-left: 15px;
-        }
-
-        .current-line-highlight {
-            position: absolute;
-            left: 0;
-            right: 0;
-            background-color: rgba(0, 123, 255, 0.05);
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        /* Modal for messages */
-        #modal-overlay {
-            display: none;
-            position: fixed;
+        /* ── DROP ZONE ──────────────────────────────────────────── */
+        #drop-zone {
+            display: none; position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
+            background: rgba(37,99,235,.08);
+            border: 3px dashed var(--accent);
+            z-index: 8000; pointer-events: none;
+            justify-content: center; align-items: center;
+            font-size: 20px; font-weight: bold; color: var(--accent);
+        }
+
+        /* ── REGULAR MODAL ──────────────────────────────────────── */
+        .modal-overlay {
+            display: none; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,.5); z-index: 9000;
+            justify-content: center; align-items: center;
         }
         .modal {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            background: #fff; padding: 24px; border-radius: 10px;
+            max-width: 420px; width: 90%;
+            box-shadow: 0 8px 32px rgba(0,0,0,.22);
         }
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .btn-danger { background: var(--danger-color); color: white; border: none; }
+        .modal h3 { margin-bottom: 10px; font-size: 15px; }
+        .modal p  { color: #555; font-size: 13.5px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
-        /* Drop Zone */
-        #drop-zone {
-            display: none;
-            position: absolute;
+        /* ── HELP MODAL ─────────────────────────────────────────── */
+        #help-overlay {
+            display: none; position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 123, 255, 0.1);
-            border: 3px dashed var(--accent-color);
-            z-index: 2000;
-            pointer-events: none;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            color: var(--accent-color);
-            font-weight: bold;
+            background: rgba(0,0,0,.55); z-index: 9100;
+            justify-content: center; align-items: center;
+        }
+        .help-modal {
+            background: #fff; border-radius: 12px;
+            width: min(680px, 96vw); max-height: 85vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 12px 40px rgba(0,0,0,.28);
+            overflow: hidden;
+        }
+        .help-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
+        }
+        .help-header h2 { font-size: 16px; font-weight: 700; }
+        .help-close {
+            width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: none; background: transparent; cursor: pointer; font-size: 18px; color: #666;
+        }
+        .help-close:hover { background: #f0f0f0; }
+        .help-body {
+            overflow-y: auto; padding: 16px 20px; flex: 1;
+        }
+        .help-section { margin-bottom: 20px; }
+        .help-section h3 {
+            font-size: 12px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .06em; color: #888; margin-bottom: 8px;
+            padding-bottom: 4px; border-bottom: 1px solid #eee;
+        }
+        .shortcut-row {
+            display: flex; align-items: center;
+            padding: 5px 0; border-bottom: 1px solid #f5f5f5;
+            gap: 12px;
+        }
+        .shortcut-row:last-child { border-bottom: none; }
+        .sc-keys {
+            display: flex; gap: 4px; flex-wrap: wrap;
+            min-width: 200px; flex-shrink: 0;
+        }
+        .sc-key {
+            background: #f3f4f6; border: 1px solid #d1d5db;
+            border-radius: 4px; padding: 2px 6px;
+            font-family: 'Courier New', monospace; font-size: 11px;
+            color: #374151; white-space: nowrap;
+            box-shadow: 0 1px 0 #c8ccd1;
+        }
+        .sc-desc { font-size: 12.5px; color: #444; }
+        .gutter-legend {
+            display: flex; gap: 12px; margin-top: 10px;
+            padding: 8px 12px; background: #f9fafb;
+            border-radius: 6px; flex-wrap: wrap;
+        }
+        .gl-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; }
+        .gl-bar { width: 5px; height: 18px; border-radius: 2px; }
+        .help-footer {
+            padding: 10px 20px;
+            border-top: 1px solid var(--border);
+            text-align: right; flex-shrink: 0;
         }
     </style>
 </head>
 <body>
 
+<!-- ── TOOLBAR ───────────────────────────────────────────────────────── -->
 <div class="toolbar">
-    <!-- File Ops -->
-    <div class="tool-group">
-        <button onclick="createNewTab()" title="新規タブ">
-            <i data-lucide="file-plus" style="width:14px; height:14px"></i>
+
+    <div class="tgroup">
+        <button class="tbtn" onclick="createNewTab()" title="新規タブ (Ctrl+N)">
+            <i data-lucide="file-plus"></i>
         </button>
-        <button onclick="document.getElementById('fileInput').click()" title="ファイルを開く">
-            <i data-lucide="folder-open" style="width:14px; height:14px"></i>
+        <button class="tbtn" onclick="document.getElementById('fileInput').click()" title="ファイルを開く">
+            <i data-lucide="folder-open"></i>
         </button>
         <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(event)" multiple>
-        
-        <div class="filename-container">
-            <i data-lucide="file-text" style="width:14px; color:#666"></i>
+        <div class="fname-wrap">
+            <i data-lucide="file-text" style="width:13px;height:13px;color:#888"></i>
             <input type="text" id="fileNameInput" placeholder="ファイル名..." oninput="updateTabNameFromInput(this.value)">
         </div>
-
-        <button onclick="saveFile()" title="名前を付けて保存 (Ctrl+S)" class="btn-primary">
-            <i data-lucide="save" style="width:14px; height:14px"></i>
+        <button class="tbtn primary" onclick="saveFile()" title="保存 (Ctrl+S)">
+            <i data-lucide="save"></i> 保存
         </button>
     </div>
 
-    <!-- Excel Formula Formatting Tools -->
-    <div class="tool-group">
-        <button onclick="formatExcelFormula()" title="Excel数式を整形" class="btn-success">
-            <i data-lucide="list-tree" style="width:14px; height:14px"></i>
-            <span>数式整形</span>
+    <div class="tsep"></div>
+
+    <div class="tgroup">
+        <button class="tbtn success" onclick="formatExcelFormula()" title="Excel数式を整形">
+            <i data-lucide="list-tree"></i> 数式整形
         </button>
-        <button onclick="unformatExcelFormula()" title="整形を解除（1行にまとめる）" class="btn-outline">
-            <i data-lucide="list" style="width:14px; height:14px"></i>
-            <span>解除</span>
+        <button class="tbtn" onclick="unformatExcelFormula()" title="整形を解除（1行にまとめる）">
+            <i data-lucide="list"></i> 解除
         </button>
     </div>
 
-    <!-- Undo / Redo -->
-    <div class="tool-group">
-        <button id="undoBtn" onclick="undo()" title="元に戻す (Ctrl+Z)">
-            <i data-lucide="undo" style="width:14px; height:14px"></i>
+    <div class="tsep"></div>
+
+    <div class="tgroup">
+        <button class="tbtn" id="undoBtn" onclick="undo()" title="元に戻す (Ctrl+Z)">
+            <i data-lucide="undo-2"></i>
         </button>
-        <button id="redoBtn" onclick="redo()" title="やり直し (Ctrl+Y)">
-            <i data-lucide="redo" style="width:14px; height:14px"></i>
+        <button class="tbtn" id="redoBtn" onclick="redo()" title="やり直し (Ctrl+Y)">
+            <i data-lucide="redo-2"></i>
         </button>
     </div>
 
-    <!-- Search & Replace -->
-    <div class="tool-group">
-        <div class="search-panel">
-            <i data-lucide="search" style="width:14px; color:#999"></i>
-            <input type="text" id="searchInput" placeholder="検索..." oninput="searchNext(true)">
-            <button onclick="searchNext()" style="border:none; padding:2px" title="次へ">
-                <i data-lucide="chevron-down" style="width:14px"></i>
+    <div class="tsep"></div>
+
+    <!-- Search -->
+    <div class="tgroup">
+        <div class="srch-wrap">
+            <i data-lucide="search" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
+            <input type="text" id="searchInput" placeholder="検索..."
+                   oninput="onSearchInput()" onkeydown="onSearchKeydown(event)">
+            <span class="srch-counter" id="srchCounter"></span>
+            <div class="srch-sep"></div>
+            <button class="tbtn" id="caseBtn"  onclick="toggleCase()"
+                    title="大文字/小文字を区別 (Alt+C)"
+                    style="padding:2px 5px;font-weight:bold;font-size:11px">Aa</button>
+            <button class="tbtn" id="regexBtn" onclick="toggleRegex()"
+                    title="正規表現 (Alt+R)"
+                    style="padding:2px 5px;font-size:11px">.*</button>
+            <button class="tbtn" onclick="searchPrev()" title="前へ (Shift+F3)" style="padding:2px 4px">
+                <i data-lucide="chevron-up"></i>
             </button>
-            <button onclick="searchPrev()" style="border:none; padding:2px" title="前へ">
-                <i data-lucide="chevron-up" style="width:14px"></i>
+            <button class="tbtn" onclick="searchNextBtn()" title="次へ (F3)" style="padding:2px 4px">
+                <i data-lucide="chevron-down"></i>
             </button>
         </div>
-        <div class="search-panel">
-            <i data-lucide="repeat" style="width:14px; color:#999"></i>
-            <input type="text" id="replaceInput" placeholder="置換...">
-            <button onclick="replaceSelected()" style="border:none; padding:2px" title="置換">
-                <i data-lucide="check" style="width:14px"></i>
+        <div class="srch-wrap" style="margin-left:4px">
+            <i data-lucide="corner-down-right" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
+            <input type="text" id="replaceInput" placeholder="置換..."
+                   onkeydown="if(event.key==='Enter')replaceCurrent()">
+            <button class="tbtn" onclick="replaceCurrent()" title="置換 (Enter in replace box)" style="padding:2px 4px">
+                <i data-lucide="check"></i>
             </button>
-            <button onclick="replaceAll()" style="border:none; padding:2px" title="一括置換">
-                <i data-lucide="chevrons-right" style="width:14px"></i>
+            <button class="tbtn" onclick="replaceAll()" title="一括置換" style="padding:2px 4px">
+                <i data-lucide="chevrons-right"></i>
             </button>
         </div>
     </div>
 
-    <!-- Font & Style -->
-    <div class="tool-group">
+    <div class="tsep"></div>
+
+    <div class="tgroup">
+        <button class="tbtn" id="wrapBtn" onclick="toggleWordWrap()" title="折り返し">
+            <i data-lucide="wrap-text"></i>
+        </button>
+        <button class="tbtn" id="guideBtn" onclick="toggleColumnGuides()" title="列ガイド (80 / 120 文字)">
+            <i data-lucide="ruler"></i>
+        </button>
+    </div>
+
+    <div class="tsep"></div>
+
+    <div class="tgroup">
         <select id="fontFamily" onchange="updateStyle()">
-            <option value="monospace" selected>等幅</option>
-            <option value="'ＭＳ ゴシック', sans-serif">MS ゴシック</option>
-            <option value="'ＭＳ 明朝', serif">MS 明朝</option>
-            <option value="'游ゴシック', sans-serif">游ゴシック</option>
-            <option value="Meiryo, sans-serif">メイリオ</option>
+            <option value="'Courier New',Courier,monospace" selected>等幅</option>
+            <option value="'MS Gothic','ＭＳ ゴシック',monospace">MS ゴシック</option>
+            <option value="'MS Mincho','ＭＳ 明朝',serif">MS 明朝</option>
+            <option value="Meiryo,sans-serif">メイリオ</option>
+            <option value="'Yu Gothic','游ゴシック',sans-serif">游ゴシック</option>
         </select>
-        
         <select id="fontSize" onchange="updateStyle()">
             <option value="12px">12</option>
             <option value="14px" selected>14</option>
             <option value="16px">16</option>
             <option value="18px">18</option>
+            <option value="20px">20</option>
         </select>
     </div>
 
-    <!-- Encoding -->
-    <div class="tool-group" style="border-right:none">
+    <div class="tsep"></div>
+
+    <div class="tgroup">
         <select id="encoding" onchange="changeEncoding()">
             <option value="SJIS">ANSI (Shift_JIS)</option>
             <option value="UTF16LE">UTF-16 LE</option>
@@ -375,679 +433,1266 @@
             <option value="UTF8BOM">UTF-8 (BOM 付き)</option>
         </select>
     </div>
+
+    <div class="tsep"></div>
+
+    <!-- Help button (far right) -->
+    <div class="tgroup" style="margin-left:auto">
+        <button class="tbtn" onclick="showHelp()" title="ショートカット一覧 (F1)">
+            <i data-lucide="circle-help"></i>
+        </button>
+    </div>
 </div>
 
-<div class="tab-bar" id="tab-bar">
-    <!-- Tabs will be rendered here -->
-</div>
+<!-- ── TAB BAR ──────────────────────────────────────────────────────── -->
+<div class="tab-bar" id="tab-bar"></div>
 
+<!-- ── MAIN AREA ────────────────────────────────────────────────────── -->
 <div class="main-container">
     <div id="drop-zone">ファイルをドロップして開く</div>
+
+    <!-- Change gutter (left strip, shows modified/added lines) -->
+    <div id="gutter-wrap">
+        <div id="gutter-inner"></div>
+    </div>
+
+    <!-- Line numbers -->
     <div class="line-numbers" id="line-numbers">1</div>
+
+    <!-- Editor -->
     <div class="editor-wrapper" id="editor-wrapper">
-        <div id="line-highlight" class="current-line-highlight"></div>
-        <textarea id="editor" spellcheck="false" placeholder=""></textarea>
+        <div id="line-hl"></div>
+        <div class="col-guide" id="guide-80"></div>
+        <div class="col-guide" id="guide-120"></div>
+        <textarea id="editor" spellcheck="false"></textarea>
     </div>
 </div>
 
-<div class="status-bar">
-    <div id="file-info">準備完了</div>
-    <div style="display: flex;">
-        <div class="status-item" id="cursor-pos">行: 1, 列: 1</div>
-        <div class="status-item" id="char-count">文字数: 0</div>
-        <div class="status-item" id="current-enc-display">UTF-8</div>
+<!-- ── STATUS BAR ───────────────────────────────────────────────────── -->
+<div class="statusbar">
+    <div id="sb-info">準備完了</div>
+    <div class="sb-right">
+        <div class="sb-item" id="sb-sel"></div>
+        <div class="sb-item" id="sb-pos">行: 1, 列: 1</div>
+        <div class="sb-item" id="sb-lines">全 1 行</div>
+        <div class="sb-item" id="sb-chars">文字数: 0</div>
+        <div class="sb-item click" id="sb-eol" onclick="cycleLineEnding()" title="クリックで改行コードを変換">LF</div>
+        <div class="sb-item" id="sb-enc">UTF-8</div>
     </div>
 </div>
 
-<!-- Custom Modal -->
-<div id="modal-overlay">
+<!-- ── REGULAR MODAL ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay">
     <div class="modal">
-        <h3 id="modal-title" style="margin-bottom:10px">確認</h3>
-        <p id="modal-body"></p>
-        <div class="modal-footer" id="modal-footer">
+        <h3 id="modal-title">確認</h3>
+        <p  id="modal-body"></p>
+        <div class="modal-footer" id="modal-footer"></div>
+    </div>
+</div>
+
+<!-- ── HELP MODAL ───────────────────────────────────────────────────── -->
+<div id="help-overlay" onclick="if(event.target===this)closeHelp()">
+    <div class="help-modal">
+        <div class="help-header">
+            <h2>⌨ ショートカット一覧 &amp; 使い方</h2>
+            <button class="help-close" onclick="closeHelp()" title="閉じる">×</button>
+        </div>
+        <div class="help-body" id="help-body">
+            <!-- Built dynamically -->
+        </div>
+        <div class="help-footer">
+            <button class="tbtn primary" onclick="closeHelp()">閉じる</button>
         </div>
     </div>
 </div>
 
 <script>
-    // Global Elements
-    const editor = document.getElementById('editor');
-    const lineNumbers = document.getElementById('line-numbers');
-    const editorWrapper = document.getElementById('editor-wrapper');
-    const statusBarPos = document.getElementById('cursor-pos');
-    const charCountDisplay = document.getElementById('char-count');
-    const encDisplay = document.getElementById('current-enc-display');
-    const fileInfo = document.getElementById('file-info');
-    const undoBtn = document.getElementById('undoBtn');
-    const redoBtn = document.getElementById('redoBtn');
-    const fileNameInput = document.getElementById('fileNameInput');
-    const tabBar = document.getElementById('tab-bar');
-    
-    const MAX_HISTORY = 100;
+/* =====================================================================
+   GLOBALS
+   ===================================================================== */
+const editor        = document.getElementById('editor');
+const lineNumbers   = document.getElementById('line-numbers');
+const editorWrapper = document.getElementById('editor-wrapper');
+const fileNameInput = document.getElementById('fileNameInput');
+const tabBar        = document.getElementById('tab-bar');
+const undoBtn       = document.getElementById('undoBtn');
+const redoBtn       = document.getElementById('redoBtn');
+const guide80       = document.getElementById('guide-80');
+const guide120      = document.getElementById('guide-120');
+const lineHl        = document.getElementById('line-hl');
+const sbInfo        = document.getElementById('sb-info');
+const gutterWrap    = document.getElementById('gutter-wrap');
+const gutterInner   = document.getElementById('gutter-inner');
 
-    // Multi-tab state
-    let tabs = [];
-    let activeTabId = null;
+const MAX_HISTORY  = 100;
+const AUTO_PAIR    = { '(':')', '[':']', '{':'}' };
+const CLOSING_CHARS = new Set([')', ']', '}']);
 
-    function createNewTab(name = "untitled.txt", content = "", encoding = "UTF8", raw = null) {
-        const id = Date.now() + Math.random().toString(36).substr(2, 9);
-        const newTab = {
-            id,
-            name,
-            content,
-            encoding,
-            rawData: raw,
-            history: [{ value: content, cursor: 0 }],
-            historyIndex: 0,
-            scrollPos: 0
-        };
-        tabs.push(newTab);
-        renderTabs();
-        switchTab(id);
-    }
+let tabs          = [];
+let activeTabId   = null;
+let searchMatches = [];
+let matchIndex    = -1;
+let caseSensitive = false;
+let useRegex      = false;
+let guidesVisible = false;
+let lastLineCount = 0;
+let inputTimer    = null;
+let gutterTimer   = null;
+let draggedTabId  = null;
 
-    function renderTabs() {
-        tabBar.innerHTML = '';
-        tabs.forEach(tab => {
-            const div = document.createElement('div');
-            div.className = `tab ${tab.id === activeTabId ? 'active' : ''}`;
-            div.onclick = () => switchTab(tab.id);
-            
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = tab.name;
-            
-            const closeBtn = document.createElement('div');
-            closeBtn.className = 'tab-close';
-            closeBtn.innerHTML = '×';
-            closeBtn.onclick = (e) => {
-                e.stopPropagation();
-                closeTab(tab.id);
-            };
-            
-            div.appendChild(nameSpan);
-            div.appendChild(closeBtn);
-            tabBar.appendChild(div);
-        });
-    }
+/* =====================================================================
+   TAB MANAGEMENT
+   ===================================================================== */
+function createNewTab(name = 'untitled.txt', content = '', encoding = 'UTF8', raw = null) {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    tabs.push({
+        id, name, content, encoding, rawData: raw,
+        baselineContent: content,          // For change gutter
+        history: [{ value: content, ss: 0, se: 0 }],
+        histIdx: 0, scrollTop: 0,
+        isDirty: false, wordWrap: false
+    });
+    // NOTE: do NOT call renderTabs() here — switchTab() will do it
+    switchTab(id);
+}
 
-    function switchTab(id) {
-        if (activeTabId === id) return;
-        
-        // Save current tab state
-        if (activeTabId) {
-            const currentTab = tabs.find(t => t.id === activeTabId);
-            if (currentTab) {
-                currentTab.content = editor.value;
-                currentTab.scrollPos = editorWrapper.scrollTop;
-                currentTab.encoding = document.getElementById('encoding').value;
-            }
+function renderTabs() {
+    tabBar.innerHTML = '';
+    tabs.forEach(tab => {
+        const div = document.createElement('div');
+        div.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+        div.dataset.tabId = tab.id;
+        div.draggable = true;
+        div.addEventListener('dragstart', onTabDragStart);
+        div.addEventListener('dragover',  onTabDragOver);
+        div.addEventListener('dragleave', onTabDragLeave);
+        div.addEventListener('drop',      onTabDrop);
+        div.addEventListener('dragend',   onTabDragEnd);
+        div.onclick = () => switchTab(tab.id);
+
+        const nameEl  = document.createElement('span');
+        nameEl.className = 'tab-name';
+        nameEl.textContent = tab.name;
+        nameEl.title = tab.name;
+
+        const dirtyEl = document.createElement('span');
+        dirtyEl.className = 'tab-dirty';
+        dirtyEl.textContent = tab.isDirty ? '●' : '';
+        dirtyEl.title = tab.isDirty ? '未保存の変更あり' : '';
+
+        const closeEl = document.createElement('div');
+        closeEl.className = 'tab-close';
+        closeEl.textContent = '×';
+        closeEl.title = '閉じる';
+        closeEl.onclick = e => { e.stopPropagation(); closeTab(tab.id); };
+
+        div.appendChild(nameEl);
+        div.appendChild(dirtyEl);
+        div.appendChild(closeEl);
+        tabBar.appendChild(div);
+    });
+    // NOTE: lucide.createIcons() is NOT called here
+    // (icons are static in toolbar HTML; re-calling here caused timing/display bugs)
+}
+
+/* ── Tab drag-and-drop reorder ────────────────────────────────────── */
+function onTabDragStart(e) {
+    draggedTabId = e.currentTarget.dataset.tabId;
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function onTabDragOver(e) {
+    // Only style as drag-over for TAB drags (not file drags from OS)
+    if (!draggedTabId) return;
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+}
+
+function onTabDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+}
+
+function onTabDrop(e) {
+    e.currentTarget.classList.remove('drag-over');
+
+    // FIX: If this is a FILE drag from OS (not a tab drag), let the window handler process it.
+    // We detect this by checking draggedTabId — it is only set via onTabDragStart.
+    if (!draggedTabId) return;
+
+    e.preventDefault(); // Prevent browser from navigating to file
+    e.stopPropagation(); // Stop window drop handler from also running for tab reorder
+
+    const targetId = e.currentTarget.dataset.tabId;
+    if (draggedTabId === targetId) { draggedTabId = null; return; }
+
+    const fi = tabs.findIndex(t => t.id === draggedTabId);
+    const ti = tabs.findIndex(t => t.id === targetId);
+    const [moved] = tabs.splice(fi, 1);
+    tabs.splice(ti, 0, moved);
+    draggedTabId = null;
+    renderTabs();
+}
+
+// FIX: Always clear draggedTabId when drag ends (catches cancel/drop-outside cases)
+function onTabDragEnd() {
+    draggedTabId = null;
+    // Remove any lingering drag-over styles
+    document.querySelectorAll('.tab.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+function switchTab(id) {
+    if (activeTabId === id) return;
+    // Save current tab state
+    if (activeTabId) {
+        const cur = getTab(activeTabId);
+        if (cur) {
+            cur.content   = editor.value;
+            cur.scrollTop = editorWrapper.scrollTop;
+            cur.encoding  = document.getElementById('encoding').value;
         }
+    }
+    activeTabId = id;
+    const tab = getTab(id);
+    if (!tab) return;
 
-        activeTabId = id;
-        const nextTab = tabs.find(t => t.id === activeTabId);
-        if(!nextTab) return;
-        
-        // Restore next tab state
-        editor.value = nextTab.content;
-        fileNameInput.value = nextTab.name;
-        document.getElementById('encoding').value = nextTab.encoding;
-        
-        renderTabs();
+    editor.value = tab.content;
+    fileNameInput.value = tab.name;
+    document.getElementById('encoding').value = tab.encoding;
+    editor.style.whiteSpace = tab.wordWrap ? 'pre-wrap' : 'pre';
+    document.getElementById('wrapBtn').classList.toggle('active', !!tab.wordWrap);
+    updateEncodingDisplay(tab.encoding);
+
+    renderTabs();
+    lastLineCount = 0;
+    updateLineNumbers();
+    updateStatus();
+    updateUndoButtons();
+    updateGutter();
+
+    requestAnimationFrame(() => { editorWrapper.scrollTop = tab.scrollTop; });
+}
+
+function closeTab(id) {
+    const idx = tabs.findIndex(t => t.id === id);
+    if (tabs.length === 1) {
+        // FIX: Reset the only tab directly (bypasses the switchTab guard)
+        const t = tabs[0];
+        t.content = ''; t.name = 'untitled.txt';
+        t.baselineContent = ''; t.rawData = null;
+        t.isDirty = false; t.wordWrap = false;
+        t.history = [{ value: '', ss: 0, se: 0 }]; t.histIdx = 0;
+        // Direct UI update (do not call switchTab — it guards against same-id)
+        editor.value = '';
+        fileNameInput.value = 'untitled.txt';
+        editor.style.whiteSpace = 'pre';
+        document.getElementById('wrapBtn').classList.remove('active');
+        lastLineCount = 0;
         updateLineNumbers();
         updateStatus();
         updateUndoButtons();
-        
-        editorWrapper.scrollTop = nextTab.scrollPos;
-        updateEncodingDisplay(nextTab.encoding);
+        updateGutter();
+        renderTabs();
+        return;
+    }
+    tabs = tabs.filter(t => t.id !== id);
+    if (activeTabId === id) {
+        activeTabId = null; // force full switch
+        switchTab(tabs[Math.max(0, idx - 1)].id);
+    } else {
+        renderTabs();
+    }
+}
+
+function updateTabNameFromInput(name) {
+    const tab = getTab(activeTabId);
+    if (tab) { tab.name = name || 'untitled.txt'; renderTabs(); }
+}
+
+function markDirty() {
+    const tab = getTab(activeTabId);
+    if (tab && !tab.isDirty) { tab.isDirty = true; renderTabs(); }
+}
+
+function getTab(id) { return tabs.find(t => t.id === id) || null; }
+
+/* =====================================================================
+   HISTORY
+   ===================================================================== */
+function saveToHistory() {
+    const tab = getTab(activeTabId);
+    if (!tab) return;
+    const state = { value: editor.value, ss: editor.selectionStart, se: editor.selectionEnd };
+    const cur   = tab.history[tab.histIdx];
+    if (cur && cur.value === state.value) return;
+    tab.history.splice(tab.histIdx + 1);
+    tab.history.push(state);
+    if (tab.history.length > MAX_HISTORY) tab.history.shift();
+    tab.histIdx = tab.history.length - 1;
+    updateUndoButtons();
+}
+
+function undo() {
+    const tab = getTab(activeTabId);
+    if (tab && tab.histIdx > 0) { tab.histIdx--; applyHistory(tab); }
+}
+
+function redo() {
+    const tab = getTab(activeTabId);
+    if (tab && tab.histIdx < tab.history.length - 1) { tab.histIdx++; applyHistory(tab); }
+}
+
+function applyHistory(tab) {
+    const s = tab.history[tab.histIdx];
+    editor.value = s.value;
+    editor.focus();
+    editor.setSelectionRange(s.ss, s.se);
+    updateLineNumbers(); updateStatus(); updateUndoButtons();
+    scheduleGutterUpdate();
+}
+
+function updateUndoButtons() {
+    const tab = getTab(activeTabId);
+    undoBtn.disabled = !tab || tab.histIdx <= 0;
+    redoBtn.disabled = !tab || tab.histIdx >= tab.history.length - 1;
+}
+
+/* =====================================================================
+   SEARCH  — BUG FIX: never steal focus from search input
+   ===================================================================== */
+function buildMatches() {
+    const q = document.getElementById('searchInput').value;
+    searchMatches = [];
+    if (!q) { matchIndex = -1; refreshCounter(); return; }
+    const text = editor.value;
+    try {
+        const flags   = 'g' + (caseSensitive ? '' : 'i');
+        const pattern = useRegex ? q : q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(pattern, flags);
+        let m;
+        while ((m = re.exec(text)) !== null) {
+            searchMatches.push({ start: m.index, end: m.index + m[0].length });
+            if (re.lastIndex === m.index) re.lastIndex++;
+        }
+    } catch (_) {}
+}
+
+function findNearestMatch() {
+    if (searchMatches.length === 0) { matchIndex = -1; return; }
+    const pos = editor.selectionStart;
+    const i = searchMatches.findIndex(m => m.start >= pos);
+    matchIndex = i === -1 ? 0 : i;
+}
+
+function refreshCounter() {
+    const el = document.getElementById('srchCounter');
+    const q  = document.getElementById('searchInput').value;
+    if (!q)                         { el.textContent = '';       el.className = 'srch-counter'; return; }
+    if (searchMatches.length === 0) { el.textContent = '0 件'; el.className = 'srch-counter no-match'; return; }
+    el.className = 'srch-counter';
+    el.textContent = `${matchIndex + 1} / ${searchMatches.length}`;
+}
+
+// FIX: keepFocus=true → do NOT call editor.focus() (called from search input)
+//      keepFocus=false → DO focus editor (called from buttons/keyboard)
+function jumpToMatch(keepFocus = false) {
+    if (matchIndex < 0 || matchIndex >= searchMatches.length) { refreshCounter(); return; }
+    const m = searchMatches[matchIndex];
+    if (!keepFocus) editor.focus();
+    editor.setSelectionRange(m.start, m.end);
+    scrollToChar(m.start);
+    refreshCounter();
+}
+
+function scrollToChar(charIdx) {
+    const before  = editor.value.substring(0, charIdx);
+    const lineIdx = (before.match(/\n/g) || []).length;
+    const lh      = parseFloat(getComputedStyle(editor).lineHeight);
+    editorWrapper.scrollTop = Math.max(0, lineIdx * lh + 10 - editorWrapper.clientHeight / 2);
+}
+
+// Called by oninput on search box — never steals focus
+function onSearchInput() {
+    buildMatches();
+    findNearestMatch();
+    jumpToMatch(true); // keepFocus = true
+}
+
+// Handle Enter/Shift+Enter in search box
+function onSearchKeydown(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        e.shiftKey ? searchPrev() : searchNextBtn();
+    }
+    if (e.key === 'Escape') {
+        editor.focus();
+    }
+}
+
+// Called by Next button / F3 — focuses editor
+function searchNextBtn() {
+    buildMatches();
+    if (searchMatches.length === 0) { refreshCounter(); return; }
+    matchIndex = matchIndex < 0 ? 0 : (matchIndex + 1) % searchMatches.length;
+    jumpToMatch(false); // moves focus to editor
+}
+
+function searchPrev() {
+    buildMatches();
+    if (searchMatches.length === 0) { refreshCounter(); return; }
+    matchIndex = matchIndex < 0 ? searchMatches.length - 1
+               : (matchIndex - 1 + searchMatches.length) % searchMatches.length;
+    jumpToMatch(false);
+}
+
+function toggleCase() {
+    caseSensitive = !caseSensitive;
+    document.getElementById('caseBtn').classList.toggle('active', caseSensitive);
+    buildMatches(); findNearestMatch(); jumpToMatch(true);
+}
+
+function toggleRegex() {
+    useRegex = !useRegex;
+    document.getElementById('regexBtn').classList.toggle('active', useRegex);
+    buildMatches(); findNearestMatch(); jumpToMatch(true);
+}
+
+function replaceCurrent() {
+    const q   = document.getElementById('searchInput').value;
+    const rep = document.getElementById('replaceInput').value;
+    if (!q) return;
+    buildMatches();
+    if (searchMatches.length === 0) return;
+    if (matchIndex < 0) findNearestMatch();
+    const m = searchMatches[matchIndex];
+    if (editor.selectionStart === m.start && editor.selectionEnd === m.end) {
+        editor.setRangeText(rep, m.start, m.end, 'end');
+        markDirty(); saveToHistory();
+        buildMatches();
+        matchIndex = Math.min(matchIndex, searchMatches.length - 1);
+        jumpToMatch(false);
+    } else {
+        editor.setSelectionRange(m.start, m.end);
+        scrollToChar(m.start);
+        refreshCounter();
+    }
+    updateLineNumbers(); updateStatus();
+}
+
+function replaceAll() {
+    const q   = document.getElementById('searchInput').value;
+    const rep = document.getElementById('replaceInput').value;
+    if (!q) return;
+    buildMatches();
+    if (searchMatches.length === 0) return;
+    const count = searchMatches.length;
+    let text = editor.value;
+    for (let i = searchMatches.length - 1; i >= 0; i--) {
+        const m = searchMatches[i];
+        text = text.substring(0, m.start) + rep + text.substring(m.end);
+    }
+    editor.value = text;
+    markDirty(); saveToHistory();
+    buildMatches(); matchIndex = -1; refreshCounter();
+    updateLineNumbers(); updateStatus();
+    scheduleGutterUpdate();
+    showAlertModal('置換完了', `${count} 箇所の置換を行いました。`);
+}
+
+/* =====================================================================
+   CHANGE GUTTER  (per-line modified/added indicator)
+   ===================================================================== */
+
+/* Compute similarity score between two strings (0–1).
+   Used to distinguish "modified" lines from "added" lines. */
+function simScore(a, b) {
+    if (a === b) return 1;
+    const ta = a.trim(), tb = b.trim();
+    if (!ta && !tb) return 1;
+    if (!ta || !tb) return 0;
+    const longer = Math.max(ta.length, tb.length);
+    // Character-level overlap
+    let matches = 0;
+    const bArr = [...tb];
+    for (const c of ta) {
+        const idx = bArr.indexOf(c);
+        if (idx !== -1) { matches++; bArr.splice(idx, 1); }
+    }
+    return matches / longer;
+}
+
+/* Returns array of 'unchanged' | 'added' | 'modified' for each current line. */
+function computeLineStatus(baseLines, curLines) {
+    const m = baseLines.length, n = curLines.length;
+    if (m === 0) return new Array(n).fill(n > 0 ? 'added' : 'unchanged');
+    if (n === 0) return [];
+
+    // Large files: use fast positional comparison
+    if (m > 1500 || n > 1500) {
+        return curLines.map((line, i) =>
+            i >= m ? 'added' : line === baseLines[i] ? 'unchanged' : 'modified'
+        );
     }
 
-    function closeTab(id) {
-        const index = tabs.findIndex(t => t.id === id);
-        if (tabs.length === 1) {
-            // もし最後のタブなら内容をクリアするだけ
-            tabs[0].content = "";
-            tabs[0].name = "untitled.txt";
-            tabs[0].history = [{value: "", cursor: 0}];
-            tabs[0].historyIndex = 0;
-            tabs[0].rawData = null;
-            switchTab(tabs[0].id);
+    // LCS-based diff using dp table (accurate)
+    const dp = Array.from({ length: m + 1 }, () => new Uint16Array(n + 1));
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            dp[i][j] = baseLines[i-1] === curLines[j-1]
+                ? dp[i-1][j-1] + 1
+                : Math.max(dp[i-1][j], dp[i][j-1]);
+        }
+    }
+
+    // Traceback — mark which current lines and base lines are in the LCS
+    const curInLCS  = new Array(n).fill(false);
+    const baseInLCS = new Array(m).fill(false);
+    let i = m, j = n;
+    while (i > 0 && j > 0) {
+        if (baseLines[i-1] === curLines[j-1]) {
+            curInLCS[j-1] = true; baseInLCS[i-1] = true;
+            i--; j--;
+        } else if (dp[i-1][j] >= dp[i][j-1]) { i--; }
+        else { j--; }
+    }
+
+    // Collect deleted base lines (not in LCS) for similarity comparison
+    const deletedBase = baseLines
+        .map((line, bi) => ({ bi, line }))
+        .filter(({ bi }) => !baseInLCS[bi]);
+
+    // Determine status for each current line
+    return curLines.map((curLine, ci) => {
+        if (curInLCS[ci]) return 'unchanged';
+        // Is there a nearby deleted base line with similar content? → modified
+        for (const { bi, line } of deletedBase) {
+            if (Math.abs(bi - ci) <= 4 && simScore(line, curLine) > 0.38) return 'modified';
+        }
+        return 'added';
+    });
+}
+
+function scheduleGutterUpdate() {
+    clearTimeout(gutterTimer);
+    gutterTimer = setTimeout(updateGutter, 700);
+}
+
+function updateGutter() {
+    const tab = getTab(activeTabId);
+    if (!tab) { gutterInner.innerHTML = ''; return; }
+
+    const baseline = tab.baselineContent || '';
+    const current  = editor.value;
+
+    if (!baseline || baseline === current) {
+        gutterInner.innerHTML = '';
+        gutterInner.style.height = '0';
+        return;
+    }
+
+    const baseLines = baseline.split(/\r?\n/);
+    const curLines  = current.split(/\r?\n/);
+    const status    = computeLineStatus(baseLines, curLines);
+
+    const lh     = parseFloat(getComputedStyle(editor).lineHeight);
+    const totalH = curLines.length * lh + 20;
+    gutterInner.style.height = totalH + 'px';
+    gutterInner.style.position = 'relative';
+
+    // Build HTML: group consecutive same-status lines into single elements (efficient)
+    let html = '';
+    let ci = 0;
+    while (ci < status.length) {
+        const s = status[ci];
+        let end = ci;
+        while (end < status.length && status[end] === s) end++;
+        if (s !== 'unchanged') {
+            const top  = 10 + ci * lh;
+            const h    = (end - ci) * lh;
+            const bg   = s === 'added' ? '#22c55e' : '#f59e0b';
+            const tip  = s === 'added' ? `追加された行 (${ci+1}–${end}行)` : `変更された行 (${ci+1}–${end}行)`;
+            html += `<div title="${tip}" style="position:absolute;top:${top}px;left:0;width:100%;height:${h}px;background:${bg};border-radius:0 2px 2px 0;opacity:0.85;cursor:default"></div>`;
+        }
+        ci = end;
+    }
+    gutterInner.innerHTML = html;
+}
+
+/* =====================================================================
+   LINE NUMBERS & STATUS
+   ===================================================================== */
+function updateLineNumbers() {
+    // FIX: Guard against calling before layout is ready
+    if (editorWrapper.clientHeight === 0) {
+        requestAnimationFrame(updateLineNumbers);
+        return;
+    }
+
+    const text      = editor.value;
+    const lineCount = (text.match(/\n/g) || []).length + 1;
+
+    // Only re-render line numbers text when count changes
+    if (lineCount !== lastLineCount) {
+        lastLineCount = lineCount;
+        let ln = '';
+        for (let i = 1; i <= lineCount; i++) ln += i + '\n';
+        lineNumbers.textContent = ln;
+    }
+
+    const tab = getTab(activeTabId);
+    if (tab && tab.wordWrap) {
+        const saved = editorWrapper.scrollTop;
+        editor.style.height = 'auto';
+        editor.style.height = Math.max(editorWrapper.clientHeight, editor.scrollHeight) + 'px';
+        editorWrapper.scrollTop = saved;
+    } else {
+        // No-reflow height calculation from line count
+        const lh     = parseFloat(getComputedStyle(editor).lineHeight);
+        const needed = Math.max(editorWrapper.clientHeight, lineCount * lh + 20);
+        if (Math.abs((parseInt(editor.style.height) || 0) - needed) > 1) {
+            editor.style.height = needed + 'px';
+        }
+    }
+}
+
+function updateStatus() {
+    const text  = editor.value;
+    const ss    = editor.selectionStart;
+    const se    = editor.selectionEnd;
+    const before = text.substring(0, ss);
+    const lineNum = (before.match(/\n/g) || []).length + 1;
+    const col     = ss - before.lastIndexOf('\n');
+    const total   = (text.match(/\n/g) || []).length + 1;
+
+    document.getElementById('sb-pos').textContent   = `行: ${lineNum}, 列: ${col}`;
+    document.getElementById('sb-lines').textContent = `全 ${total} 行`;
+    document.getElementById('sb-chars').textContent = `文字数: ${text.length}`;
+
+    const selEl = document.getElementById('sb-sel');
+    if (ss !== se) {
+        const selLen   = se - ss;
+        const selLines = (text.substring(ss, se).match(/\n/g) || []).length + 1;
+        selEl.textContent = `選択: ${selLen}文字 (${selLines}行)`;
+    } else {
+        selEl.textContent = '';
+    }
+
+    const eolEl = document.getElementById('sb-eol');
+    eolEl.textContent = text.includes('\r\n') ? 'CRLF' : text.includes('\r') ? 'CR' : 'LF';
+
+    const lh = parseFloat(getComputedStyle(editor).lineHeight);
+    lineHl.style.top    = ((lineNum - 1) * lh + 10) + 'px';
+    lineHl.style.height = lh + 'px';
+}
+
+function cycleLineEnding() {
+    const cur  = document.getElementById('sb-eol').textContent;
+    let text   = editor.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    if (cur === 'LF') text = text.replace(/\n/g, '\r\n');
+    editor.value = text;
+    markDirty(); saveToHistory(); updateLineNumbers(); updateStatus();
+}
+
+/* =====================================================================
+   VIEW TOGGLES
+   ===================================================================== */
+function toggleWordWrap() {
+    const tab = getTab(activeTabId);
+    if (!tab) return;
+    tab.wordWrap = !tab.wordWrap;
+    editor.style.whiteSpace = tab.wordWrap ? 'pre-wrap' : 'pre';
+    document.getElementById('wrapBtn').classList.toggle('active', tab.wordWrap);
+    lastLineCount = 0;
+    updateLineNumbers();
+}
+
+function toggleColumnGuides() {
+    guidesVisible = !guidesVisible;
+    document.getElementById('guideBtn').classList.toggle('active', guidesVisible);
+    guide80.style.display  = guidesVisible ? 'block' : 'none';
+    guide120.style.display = guidesVisible ? 'block' : 'none';
+    if (guidesVisible) updateColumnGuides();
+}
+
+function updateColumnGuides() {
+    if (!guidesVisible) return;
+    const canvas = document.createElement('canvas');
+    const ctx    = canvas.getContext('2d');
+    ctx.font     = getComputedStyle(editor).font;
+    const cw     = ctx.measureText('M').width;
+    guide80.style.left  = Math.round(10 + 80  * cw) + 'px';
+    guide120.style.left = Math.round(10 + 120 * cw) + 'px';
+}
+
+/* =====================================================================
+   EXCEL FORMULA TOOLS
+   ===================================================================== */
+function formatExcelFormula() {
+    const formula = editor.value.trim();
+    if (!formula) return;
+    let result = '', inStr = false, curLen = 0, lastTok = '';
+    const stack = [];
+    const clean = formula.replace(/\s+/g, ' ');
+    for (const ch of clean) {
+        if (ch === '"') { inStr = !inStr; result += ch; curLen++; continue; }
+        if (inStr)      { result += ch; curLen++; continue; }
+        if (ch === '(') {
+            result += ch; curLen++;
+            stack.push({ pos: curLen, isLET: lastTok.toUpperCase() === 'LET', argCount: 0 });
+            lastTok = '';
+        } else if (ch === ')') {
+            stack.pop(); result += ch; curLen++; lastTok = '';
+        } else if (ch === ',') {
+            const ctx = stack[stack.length - 1];
+            if (ctx) {
+                ctx.argCount++;
+                if (ctx.isLET && ctx.argCount % 2 !== 0) { result += ch + ' '; curLen += 2; }
+                else { result += ch + '\n' + ' '.repeat(ctx.pos); curLen = ctx.pos; }
+            } else { result += ch + '\n'; curLen = 0; }
+            lastTok = '';
+        } else if (ch === ' ') {
+            if (curLen > 0 && !result.endsWith('\n')) { result += ' '; curLen++; }
+        } else {
+            result += ch; curLen++;
+            if (/[A-Za-z0-9_]/.test(ch)) lastTok += ch; else lastTok = '';
+        }
+    }
+    editor.value = result;
+    markDirty(); saveToHistory(); lastLineCount = 0; updateLineNumbers(); updateStatus();
+    scheduleGutterUpdate();
+}
+
+function unformatExcelFormula() {
+    const formula = editor.value;
+    if (!formula) return;
+    let result = '', inStr = false;
+    for (const ch of formula) {
+        if (ch === '"') { inStr = !inStr; result += ch; continue; }
+        if (inStr)      { result += ch; continue; }
+        if (ch === '\n' || ch === '\r') continue;
+        result += ch;
+    }
+    editor.value = result.replace(/\s+/g, ' ').replace(/,\s*/g, ',').trim();
+    markDirty(); saveToHistory(); lastLineCount = 0; updateLineNumbers(); updateStatus();
+    scheduleGutterUpdate();
+}
+
+/* =====================================================================
+   EDITOR KEYBOARD HANDLING
+   ===================================================================== */
+editor.addEventListener('keydown', e => {
+    const start = editor.selectionStart;
+    const end   = editor.selectionEnd;
+    const text  = editor.value;
+
+    /* Tab / Shift+Tab ─────────────────────────────────────────── */
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        if (start === end) {
+            editor.setRangeText('\t', start, end, 'end');
+        } else {
+            const blockStart = text.lastIndexOf('\n', start - 1) + 1;
+            const blockEndNL = text.indexOf('\n', end - 1);
+            const blockEnd   = blockEndNL === -1 ? text.length : blockEndNL;
+            const lines      = text.substring(blockStart, blockEnd).split('\n');
+            let newBlock;
+            if (e.shiftKey) {
+                newBlock = lines.map(l => {
+                    if (l.startsWith('\t'))   return l.slice(1);
+                    if (l.startsWith('    ')) return l.slice(4);
+                    if (l.startsWith('   '))  return l.slice(3);
+                    if (l.startsWith('  '))   return l.slice(2);
+                    if (l.startsWith(' '))    return l.slice(1);
+                    return l;
+                }).join('\n');
+            } else {
+                newBlock = lines.map(l => '\t' + l).join('\n');
+            }
+            editor.setRangeText(newBlock, blockStart, blockEnd, 'preserve');
+            editor.setSelectionRange(blockStart, blockStart + newBlock.length);
+        }
+        markDirty(); saveToHistory(); updateLineNumbers(); updateStatus();
+        return;
+    }
+
+    /* Home: smart jump ────────────────────────────────────────── */
+    if (e.key === 'Home' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const lineStart   = text.lastIndexOf('\n', start - 1) + 1;
+        const lineContent = text.substring(lineStart);
+        const firstNS     = lineContent.search(/\S/);
+        const smartPos    = firstNS === -1 ? lineStart : lineStart + firstNS;
+        const newPos      = start === smartPos ? lineStart : smartPos;
+        if (e.shiftKey) {
+            const anchor = editor.selectionEnd;
+            editor.setSelectionRange(Math.min(newPos, anchor), Math.max(newPos, anchor));
+        } else {
+            editor.setSelectionRange(newPos, newPos);
+        }
+        updateStatus();
+        return;
+    }
+
+    /* Alt+↑/↓: move line ──────────────────────────────────────── */
+    if (e.altKey && !e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+        const lineEnd   = text.indexOf('\n', start);
+        if (e.key === 'ArrowUp' && lineStart > 0) {
+            const prevNL    = text.lastIndexOf('\n', lineStart - 2);
+            const prevStart = prevNL + 1;
+            const curLine   = lineEnd === -1 ? text.substring(lineStart) : text.substring(lineStart, lineEnd);
+            const prevLine  = text.substring(prevStart, lineStart - 1);
+            const tail      = lineEnd === -1 ? '' : text.substring(lineEnd);
+            editor.value    = text.substring(0, prevStart) + curLine + '\n' + prevLine + tail;
+            const np        = prevStart + (start - lineStart);
+            editor.setSelectionRange(np, np);
+        } else if (e.key === 'ArrowDown' && lineEnd !== -1) {
+            const nextEnd  = text.indexOf('\n', lineEnd + 1);
+            const curLine  = text.substring(lineStart, lineEnd);
+            const nextLine = nextEnd === -1 ? text.substring(lineEnd + 1) : text.substring(lineEnd + 1, nextEnd);
+            const tail     = nextEnd === -1 ? '' : text.substring(nextEnd);
+            editor.value   = text.substring(0, lineStart) + nextLine + '\n' + curLine + tail;
+            const np       = lineStart + nextLine.length + 1 + (start - lineStart);
+            editor.setSelectionRange(np, np);
+        }
+        markDirty(); saveToHistory(); lastLineCount = 0; updateLineNumbers(); updateStatus();
+        scheduleGutterUpdate();
+        return;
+    }
+
+    /* Auto bracket completion ──────────────────────────────────── */
+    if (AUTO_PAIR[e.key]) {
+        e.preventDefault();
+        const closing = AUTO_PAIR[e.key];
+        if (start !== end) {
+            const sel = text.substring(start, end);
+            editor.setRangeText(e.key + sel + closing, start, end, 'preserve');
+            editor.setSelectionRange(start + 1, end + 1);
+        } else {
+            editor.setRangeText(e.key + closing, start, end, 'start');
+            editor.setSelectionRange(start + 1, start + 1);
+        }
+        markDirty(); updateStatus(); updateLineNumbers();
+        return;
+    }
+
+    /* Skip over closing bracket ───────────────────────────────── */
+    if (CLOSING_CHARS.has(e.key) && start === end && text[start] === e.key) {
+        e.preventDefault();
+        editor.setSelectionRange(start + 1, start + 1);
+        updateStatus();
+        return;
+    }
+
+    /* Backspace: delete matching pair ────────────────────────── */
+    if (e.key === 'Backspace' && start === end && start > 0) {
+        const prev = text[start - 1], next = text[start];
+        if (AUTO_PAIR[prev] === next) {
+            e.preventDefault();
+            editor.setRangeText('', start - 1, start + 1, 'end');
+            markDirty(); updateStatus(); updateLineNumbers();
             return;
         }
-        
-        tabs = tabs.filter(t => t.id !== id);
-        if (activeTabId === id) {
-            switchTab(tabs[Math.max(0, index - 1)].id);
-        } else {
-            renderTabs();
+    }
+
+    /* Enter: preserve / smart indent ──────────────────────────── */
+    if (e.key === 'Enter') {
+        const lineStart   = text.lastIndexOf('\n', start - 1) + 1;
+        const lineContent = text.substring(lineStart, start);
+        const indentMatch = lineContent.match(/^[\t ]*/);
+        const indent      = indentMatch ? indentMatch[0] : '';
+        const prevChar    = text[start - 1];
+        const nextChar    = text[start];
+        if (prevChar && AUTO_PAIR[prevChar] === nextChar) {
+            e.preventDefault();
+            const ins = '\n' + indent + '\t' + '\n' + indent;
+            editor.setRangeText(ins, start, end, 'end');
+            editor.setSelectionRange(start + 1 + indent.length + 1, start + 1 + indent.length + 1);
+            markDirty(); updateLineNumbers(); updateStatus();
+            return;
+        }
+        if (indent) {
+            e.preventDefault();
+            editor.setRangeText('\n' + indent, start, end, 'end');
+            markDirty(); updateLineNumbers(); updateStatus();
+        }
+    }
+});
+
+/* =====================================================================
+   GLOBAL KEYBOARD SHORTCUTS
+   ===================================================================== */
+window.addEventListener('keydown', e => {
+    const ctrl = e.ctrlKey || e.metaKey;
+
+    if (e.key === 'F1')  { e.preventDefault(); showHelp(); return; }
+    if (e.key === 'F3')  { e.preventDefault(); e.shiftKey ? searchPrev() : searchNextBtn(); return; }
+
+    if (ctrl) {
+        switch (e.key.toLowerCase()) {
+            case 's': e.preventDefault(); saveFile();        return;
+            case 'z': e.preventDefault(); e.shiftKey ? redo() : undo(); return;
+            case 'y': e.preventDefault(); redo();            return;
+            case 'n': e.preventDefault(); createNewTab();    return;
+            case 'f': e.preventDefault();
+                document.getElementById('searchInput').focus();
+                document.getElementById('searchInput').select();
+                return;
+            case 'd': e.preventDefault(); duplicateLine();   return;
         }
     }
 
-    function updateTabNameFromInput(name) {
-        const tab = tabs.find(t => t.id === activeTabId);
-        if (tab) {
-            tab.name = name || "untitled.txt";
-            renderTabs();
-        }
+    if (e.altKey && !ctrl) {
+        if (e.key.toLowerCase() === 'c') { e.preventDefault(); toggleCase();  return; }
+        if (e.key.toLowerCase() === 'r') { e.preventDefault(); toggleRegex(); return; }
     }
+});
 
-    // History Management
-    function saveToHistory() {
-        const tab = tabs.find(t => t.id === activeTabId);
-        if (!tab) return;
+function duplicateLine() {
+    const text      = editor.value;
+    const start     = editor.selectionStart;
+    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+    const lineEnd   = text.indexOf('\n', start);
+    const curLine   = lineEnd === -1 ? text.substring(lineStart) : text.substring(lineStart, lineEnd);
+    const insPos    = lineEnd === -1 ? text.length : lineEnd;
+    editor.setRangeText('\n' + curLine, insPos, insPos, 'end');
+    const np = insPos + 1 + (start - lineStart);
+    editor.setSelectionRange(np, np);
+    markDirty(); saveToHistory(); lastLineCount = 0; updateLineNumbers(); updateStatus();
+    scheduleGutterUpdate();
+}
 
-        const state = {
-            value: editor.value,
-            cursor: editor.selectionStart
+/* =====================================================================
+   EDITOR EVENTS
+   ===================================================================== */
+editor.addEventListener('input', () => {
+    markDirty();
+    updateLineNumbers();
+    updateStatus();
+    const tab = getTab(activeTabId);
+    if (tab) tab.rawData = null;
+    clearTimeout(inputTimer);
+    inputTimer = setTimeout(saveToHistory, 600);
+    scheduleGutterUpdate();
+});
+
+editorWrapper.addEventListener('scroll', () => {
+    lineNumbers.scrollTop = editorWrapper.scrollTop;
+    gutterWrap.scrollTop  = editorWrapper.scrollTop; // sync change gutter
+});
+
+['click', 'keyup', 'focus', 'mouseup'].forEach(ev => editor.addEventListener(ev, updateStatus));
+
+/* Line number click → select line */
+lineNumbers.addEventListener('click', e => {
+    const lh     = parseFloat(getComputedStyle(editor).lineHeight);
+    const clickY = e.offsetY + lineNumbers.scrollTop - 10;
+    const li     = Math.max(0, Math.floor(clickY / lh));
+    const lines  = editor.value.split('\n');
+    if (li >= lines.length) return;
+    let pos = 0;
+    for (let i = 0; i < li; i++) pos += lines[i].length + 1;
+    editor.focus();
+    editor.setSelectionRange(pos, pos + lines[li].length);
+    updateStatus();
+});
+
+/* =====================================================================
+   STYLE  (font / size)
+   ===================================================================== */
+function updateStyle() {
+    const fam  = document.getElementById('fontFamily').value;
+    const size = document.getElementById('fontSize').value;
+    editor.style.fontFamily      = fam;
+    editor.style.fontSize        = size;
+    lineNumbers.style.fontFamily = fam;
+    lineNumbers.style.fontSize   = size;
+    setTimeout(() => {
+        lastLineCount = 0;
+        updateLineNumbers(); updateStatus(); updateColumnGuides();
+    }, 10);
+}
+
+/* =====================================================================
+   ENCODING
+   ===================================================================== */
+const ENC_LABEL = {
+    SJIS:'ANSI (Shift_JIS)', UTF16LE:'UTF-16 LE', UTF16BE:'UTF-16 BE',
+    UTF8:'UTF-8', UTF8BOM:'UTF-8 (BOM 付き)'
+};
+
+function updateEncodingDisplay(enc) {
+    document.getElementById('sb-enc').textContent = ENC_LABEL[enc] || 'UTF-8';
+}
+
+function applyEncoding(enc) {
+    const tab = getTab(activeTabId);
+    if (!tab || !tab.rawData) return;
+    try {
+        const fromEnc = enc === 'UTF8BOM' ? 'UTF8' : enc;
+        const ua = Encoding.convert(tab.rawData, { to: 'UNICODE', from: fromEnc });
+        let text = Encoding.codeToString(ua);
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        editor.value = text;
+        tab.encoding = enc;
+        updateEncodingDisplay(enc); updateLineNumbers(); updateStatus();
+    } catch (_) { showAlertModal('エラー', '文字コードの変換に失敗しました。'); }
+}
+
+function changeEncoding() {
+    const enc = document.getElementById('encoding').value;
+    const tab = getTab(activeTabId);
+    if (tab?.rawData) { applyEncoding(enc); saveToHistory(); }
+    else { updateEncodingDisplay(enc); if (tab) tab.encoding = enc; }
+}
+
+/* =====================================================================
+   FILE I/O
+   ===================================================================== */
+async function handleFileSelect(e) {
+    for (const f of Array.from(e.target.files)) await readFile(f);
+    e.target.value = '';
+}
+
+function readFile(file) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const raw    = new Uint8Array(ev.target.result);
+            let detected = Encoding.detect(raw);
+            let target   = 'UTF8';
+            if (detected === 'SJIS')    target = 'SJIS';
+            else if (detected === 'UTF16LE') target = 'UTF16LE';
+            else if (detected === 'UTF16BE') target = 'UTF16BE';
+            else if (detected === 'UTF8' && raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF)
+                target = 'UTF8BOM';
+            const fromEnc = target === 'UTF8BOM' ? 'UTF8' : target;
+            const ua      = Encoding.convert(raw, { to: 'UNICODE', from: fromEnc });
+            let text      = Encoding.codeToString(ua);
+            if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+            createNewTab(file.name, text, target, raw);
+            resolve();
         };
-        if (tab.historyIndex >= 0 && tab.history[tab.historyIndex].value === state.value) return;
-        
-        tab.history = tab.history.slice(0, tab.historyIndex + 1);
-        tab.history.push(state);
-        if (tab.history.length > MAX_HISTORY) tab.history.shift();
-        tab.historyIndex = tab.history.length - 1;
-        updateUndoButtons();
-    }
+        reader.readAsArrayBuffer(file);
+    });
+}
 
-    function undo() {
-        const tab = tabs.find(t => t.id === activeTabId);
-        if (tab && tab.historyIndex > 0) {
-            tab.historyIndex--;
-            applyHistoryState(tab);
+async function saveFile() {
+    const tab = getTab(activeTabId);
+    if (!tab) return;
+    const text = editor.value;
+    const enc  = document.getElementById('encoding').value;
+    const name = fileNameInput.value || 'untitled.txt';
+    const ua   = Encoding.stringToCode(text);
+    const toE  = enc === 'UTF8BOM' ? 'UTF8' : enc;
+    let encoded = Encoding.convert(ua, { to: toE, from: 'UNICODE' });
+
+    function prependBOM(bom) {
+        const arr = new Uint8Array(bom.length + encoded.length);
+        arr.set(bom); arr.set(encoded, bom.length); encoded = arr;
+    }
+    if (enc === 'UTF8BOM') prependBOM([0xEF, 0xBB, 0xBF]);
+    else if (enc === 'UTF16LE' && (encoded[0] !== 0xFF || encoded[1] !== 0xFE)) prependBOM([0xFF, 0xFE]);
+    else if (enc === 'UTF16BE' && (encoded[0] !== 0xFE || encoded[1] !== 0xFF)) prependBOM([0xFE, 0xFF]);
+
+    const blob = new Blob([new Uint8Array(encoded)], { type: 'text/plain' });
+
+    if ('showSaveFilePicker' in window) {
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: name,
+                types: [{ description: 'テキストファイル',
+                    accept: { 'text/plain': ['.txt','.csv','.html','.css','.js','.json','.md','.xml'] } }]
+            });
+            const w = await handle.createWritable();
+            await w.write(blob); await w.close();
+            fileNameInput.value = handle.name;
+            updateTabNameFromInput(handle.name);
+            // Reset baseline → gutter clears after save
+            tab.baselineContent = text;
+            tab.isDirty = false;
+            renderTabs();
+            updateGutter();
+            sbInfo.textContent = '保存完了: ' + handle.name;
+            setTimeout(() => sbInfo.textContent = '準備完了', 3000);
+        } catch (err) {
+            if (err.name !== 'AbortError') showAlertModal('エラー', '保存に失敗しました。');
         }
+    } else {
+        const url = URL.createObjectURL(blob);
+        Object.assign(document.createElement('a'), { href: url, download: name }).click();
+        URL.revokeObjectURL(url);
+        tab.baselineContent = text;
+        tab.isDirty = false;
+        renderTabs(); updateGutter();
+        sbInfo.textContent = 'ダウンロード完了';
+        setTimeout(() => sbInfo.textContent = '準備完了', 3000);
     }
+}
 
-    function redo() {
-        const tab = tabs.find(t => t.id === activeTabId);
-        if (tab && tab.historyIndex < tab.history.length - 1) {
-            tab.historyIndex++;
-            applyHistoryState(tab);
-        }
+/* =====================================================================
+   DRAG & DROP (files onto editor area)
+   ===================================================================== */
+const dropZone = document.getElementById('drop-zone');
+window.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.display = 'flex'; });
+window.addEventListener('dragleave', e => { if (!e.relatedTarget) dropZone.style.display = 'none'; });
+window.addEventListener('drop', async e => {
+    e.preventDefault(); dropZone.style.display = 'none';
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return; // tab reorder drop — already handled
+    for (const f of files) await readFile(f);
+});
+
+/* =====================================================================
+   MODALS
+   ===================================================================== */
+function showAlertModal(title, body) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').textContent  = body;
+    document.getElementById('modal-footer').innerHTML  =
+        `<button class="tbtn primary" onclick="closeModal()">OK</button>`;
+    document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function showConfirmModal(title, body, onConfirm) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').textContent  = body;
+    document.getElementById('modal-footer').innerHTML  =
+        `<button class="tbtn" onclick="closeModal()">キャンセル</button>
+         <button class="tbtn" style="background:var(--danger);color:#fff;border-color:var(--danger)"
+                 id="conf-btn">実行</button>`;
+    document.getElementById('conf-btn').onclick = onConfirm;
+    document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+
+/* =====================================================================
+   HELP PANEL
+   ===================================================================== */
+const SHORTCUTS = [
+    {
+        cat: 'ファイル操作',
+        items: [
+            { keys: ['Ctrl+S'],          desc: '保存' },
+            { keys: ['Ctrl+N'],          desc: '新規タブを開く' },
+            { keys: ['Ctrl+W / × ボタン'], desc: 'タブを閉じる（最後の1枚はリセット）' },
+        ]
+    },
+    {
+        cat: '編集操作',
+        items: [
+            { keys: ['Ctrl+Z'],          desc: '元に戻す' },
+            { keys: ['Ctrl+Y', 'Ctrl+Shift+Z'], desc: 'やり直し' },
+            { keys: ['Ctrl+D'],          desc: '現在行を直下に複製' },
+            { keys: ['Tab'],             desc: 'インデント（複数行選択時は一括）' },
+            { keys: ['Shift+Tab'],       desc: 'アウトデント（一括も可）' },
+            { keys: ['Alt+↑ / Alt+↓'],  desc: '現在行を上下に移動' },
+            { keys: ['Home'],            desc: '行頭スマートジャンプ（非空白 ↔ 真の行頭）' },
+            { keys: ['( [ {'],           desc: '括弧を自動補完・選択範囲を括弧で囲む' },
+            { keys: ['Backspace'],       desc: '対応する括弧ペアを一括削除' },
+            { keys: ['Enter'],           desc: '自動インデント維持（括弧内は内側に展開）' },
+        ]
+    },
+    {
+        cat: '検索・置換',
+        items: [
+            { keys: ['Ctrl+F'],          desc: '検索ボックスにフォーカス' },
+            { keys: ['F3'],              desc: '次を検索' },
+            { keys: ['Shift+F3'],        desc: '前を検索' },
+            { keys: ['Enter'],           desc: '検索ボックス内で次へ' },
+            { keys: ['Shift+Enter'],     desc: '検索ボックス内で前へ' },
+            { keys: ['Escape'],          desc: '検索ボックスを閉じてエディターに戻る' },
+            { keys: ['Alt+C'],           desc: '大文字/小文字の区別 切替' },
+            { keys: ['Alt+R'],           desc: '正規表現モード 切替' },
+            { keys: ['✓ ボタン'],        desc: '現在のマッチを置換して次へ' },
+            { keys: ['≫ ボタン'],        desc: '全件を一括置換' },
+        ]
+    },
+    {
+        cat: '表示・ナビゲーション',
+        items: [
+            { keys: ['行番号クリック'],   desc: 'その行全体を選択' },
+            { keys: ['折り返し ボタン'],  desc: '行の折り返し表示 ON/OFF（タブごとに保持）' },
+            { keys: ['ルーラー ボタン'],  desc: '80・120文字位置に列ガイド線を表示' },
+            { keys: ['改行コードクリック'], desc: 'ステータスバーの LF/CRLF クリックで変換' },
+        ]
+    },
+    {
+        cat: 'タブ管理',
+        items: [
+            { keys: ['タブをドラッグ'],  desc: 'タブを並び替え（ドラッグ＆ドロップ）' },
+            { keys: ['ファイルをD&D'],   desc: 'エディター・タブバーにドロップしてファイルを開く' },
+        ]
+    },
+    {
+        cat: 'F1',
+        items: [
+            { keys: ['F1'],              desc: 'このショートカット一覧を表示' },
+        ]
     }
+];
 
-    function applyHistoryState(tab) {
-        const state = tab.history[tab.historyIndex];
-        editor.value = state.value;
-        editor.focus();
-        editor.setSelectionRange(state.cursor, state.cursor);
-        updateLineNumbers();
-        updateStatus();
-        updateUndoButtons();
-    }
+function showHelp() {
+    const body = document.getElementById('help-body');
 
-    function updateUndoButtons() {
-        const tab = tabs.find(t => t.id === activeTabId);
-        if(!tab) return;
-        undoBtn.disabled = (tab.historyIndex <= 0);
-        redoBtn.disabled = (tab.historyIndex >= tab.history.length - 1);
-    }
+    const gutterLegend = `
+        <div class="gutter-legend">
+            <div class="gl-item">
+                <div class="gl-bar" style="background:#22c55e"></div>
+                <span>追加された行（保存後に新規追加）</span>
+            </div>
+            <div class="gl-item">
+                <div class="gl-bar" style="background:#f59e0b"></div>
+                <span>変更された行（保存後に内容が変わった行）</span>
+            </div>
+            <div class="gl-item">
+                <div class="gl-bar" style="background:transparent;border:1px solid #ddd"></div>
+                <span>変更なし（保存時と同じ内容）</span>
+            </div>
+        </div>`;
 
-    /**
-     * Excel Formula Formatter (Original Logic)
-     */
-    function formatExcelFormula() {
-        const formula = editor.value.trim();
-        if (!formula) return;
+    const sections = SHORTCUTS.map(sec => {
+        const rows = sec.items.map(item => {
+            const keysHtml = item.keys.map(k => `<span class="sc-key">${k}</span>`).join('');
+            return `<div class="shortcut-row">
+                        <div class="sc-keys">${keysHtml}</div>
+                        <div class="sc-desc">${item.desc}</div>
+                    </div>`;
+        }).join('');
+        const extra = sec.cat === '表示・ナビゲーション' ? gutterLegend : '';
+        return `<div class="help-section">
+                    <h3>${sec.cat}</h3>
+                    ${rows}
+                    ${extra}
+                </div>`;
+    }).join('');
 
-        let result = '';
-        let indentStack = []; 
-        let inString = false;
-        let currentLineLength = 0;
-        let lastToken = '';
+    body.innerHTML = sections;
+    document.getElementById('help-overlay').style.display = 'flex';
+}
 
-        const cleanFormula = formula.replace(/\s+/g, ' ');
+function closeHelp() {
+    document.getElementById('help-overlay').style.display = 'none';
+}
 
-        for (let i = 0; i < cleanFormula.length; i++) {
-            const char = cleanFormula[i];
-
-            if (char === '"') {
-                inString = !inString;
-                result += char;
-                currentLineLength++;
-                continue;
-            }
-
-            if (inString) {
-                result += char;
-                currentLineLength++;
-                continue;
-            }
-
-            if (char === '(') {
-                const isLET = lastToken.toUpperCase() === 'LET';
-                result += char;
-                currentLineLength++;
-                indentStack.push({
-                    pos: currentLineLength,
-                    isLET: isLET,
-                    argCount: 0
-                });
-                lastToken = '';
-            } else if (char === ')') {
-                indentStack.pop();
-                result += char;
-                currentLineLength++;
-                lastToken = '';
-            } else if (char === ',') {
-                const currentContext = indentStack[indentStack.length - 1];
-                
-                if (currentContext) {
-                    currentContext.argCount++;
-                    if (currentContext.isLET && currentContext.argCount % 2 !== 0) {
-                        result += char + ' ';
-                        currentLineLength += 2;
-                    } else {
-                        result += char + '\n';
-                        const targetIndent = currentContext.pos;
-                        result += ' '.repeat(targetIndent);
-                        currentLineLength = targetIndent;
-                    }
-                } else {
-                    result += char + '\n';
-                    currentLineLength = 0;
-                }
-                lastToken = '';
-            } else if (char === ' ') {
-                if (currentLineLength > 0 && !result.endsWith('\n')) {
-                    result += ' ';
-                    currentLineLength++;
-                }
-            } else {
-                result += char;
-                currentLineLength++;
-                if (/[A-Za-z0-9_]/.test(char)) {
-                    lastToken += char;
-                } else {
-                    lastToken = '';
-                }
-            }
-        }
-
-        editor.value = result;
-        saveToHistory();
-        updateLineNumbers();
-        updateStatus();
-    }
-
-    /**
-     * Unformat Excel Formula (Original Logic)
-     */
-    function unformatExcelFormula() {
-        const formula = editor.value;
-        if (!formula) return;
-
-        let result = '';
-        let inString = false;
-
-        for (let i = 0; i < formula.length; i++) {
-            const char = formula[i];
-            if (char === '"') {
-                inString = !inString;
-                result += char;
-                continue;
-            }
-            if (inString) {
-                result += char;
-                continue;
-            }
-            if (char === '\n' || char === '\r') continue;
-            result += char;
-        }
-
-        editor.value = result.replace(/\s+/g, ' ')
-                             .replace(/,\s+/g, ',')
-                             .trim();
-        saveToHistory();
-        updateLineNumbers();
-        updateStatus();
-    }
-
+/* =====================================================================
+   INIT
+   ===================================================================== */
+window.addEventListener('load', () => {
+    // Initialize lucide icons ONCE here only (not inside renderTabs)
     lucide.createIcons();
 
-    let inputTimeout;
-    editor.addEventListener('input', () => {
+    createNewTab();
+
+    // Defer initial layout-dependent updates until after CSS has been applied
+    requestAnimationFrame(() => {
+        updateStyle();
+        lastLineCount = 0;
         updateLineNumbers();
         updateStatus();
-        const tab = tabs.find(t => t.id === activeTabId);
-        if (tab) tab.rawData = null;
-        clearTimeout(inputTimeout);
-        inputTimeout = setTimeout(saveToHistory, 500);
     });
-
-    editorWrapper.addEventListener('scroll', () => {
-        lineNumbers.scrollTop = editorWrapper.scrollTop;
-    });
-
-    // Keyboard Shortcuts
-    window.addEventListener('keydown', (e) => {
-        if (e.ctrlKey || e.metaKey) {
-            switch(e.key.toLowerCase()) {
-                case 's': e.preventDefault(); saveFile(); break;
-                case 'z': e.preventDefault(); e.shiftKey ? redo() : undo(); break;
-                case 'y': e.preventDefault(); redo(); break;
-                case 'f': 
-                    e.preventDefault(); 
-                    document.getElementById('searchInput').focus(); 
-                    break;
-            }
-        }
-    });
-
-    editor.addEventListener('keydown', (e) => {
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            const start = editor.selectionStart;
-            const end = editor.selectionEnd;
-            editor.value = editor.value.substring(0, start) + "\t" + editor.value.substring(end);
-            editor.selectionStart = editor.selectionEnd = start + 1;
-            updateStatus();
-            updateLineNumbers();
-            saveToHistory();
-        }
-    });
-
-    ['click', 'keyup', 'focus'].forEach(evt => {
-        editor.addEventListener(evt, updateStatus);
-    });
-
-    function searchNext(isFromInput = false) {
-        const query = document.getElementById('searchInput').value;
-        if (!query) return;
-        const text = editor.value;
-        const startIndex = isFromInput ? editor.selectionStart : editor.selectionEnd;
-        let index = text.indexOf(query, startIndex);
-        if (index === -1) index = text.indexOf(query, 0);
-        if (index !== -1) {
-            if (!isFromInput) {
-                editor.focus();
-            }
-            editor.setSelectionRange(index, index + query.length);
-            
-            const lineHeight = parseFloat(getComputedStyle(editor).lineHeight);
-            const linesBefore = text.substring(0, index).split('\n').length;
-            editorWrapper.scrollTop = (linesBefore - 5) * lineHeight; 
-        }
-    }
-
-    function searchPrev() {
-        const query = document.getElementById('searchInput').value;
-        if (!query) return;
-        const text = editor.value;
-        const currentPos = editor.selectionStart;
-        let index = text.lastIndexOf(query, currentPos - 1);
-        if (index === -1) index = text.lastIndexOf(query);
-        if (index !== -1) {
-            editor.focus();
-            editor.setSelectionRange(index, index + query.length);
-        }
-    }
-
-    function replaceSelected() {
-        const query = document.getElementById('searchInput').value;
-        const replacement = document.getElementById('replaceInput').value;
-        if (!query) return;
-        if (editor.value.substring(editor.selectionStart, editor.selectionEnd) === query) {
-            editor.setRangeText(replacement, editor.selectionStart, editor.selectionEnd, 'select');
-            saveToHistory();
-            searchNext(); 
-        } else {
-            searchNext(); 
-        }
-        updateStatus();
-        updateLineNumbers();
-    }
-
-    function replaceAll() {
-        const query = document.getElementById('searchInput').value;
-        const replacement = document.getElementById('replaceInput').value;
-        if (!query) return;
-        const parts = editor.value.split(query);
-        if (parts.length > 1) {
-            editor.value = parts.join(replacement);
-            saveToHistory();
-            updateStatus();
-            updateLineNumbers();
-            showAlertModal("置換完了", `${parts.length - 1} 箇所の置換を行いました。`);
-        }
-    }
-
-    function updateStyle() {
-        const family = document.getElementById('fontFamily').value;
-        const size = document.getElementById('fontSize').value;
-        editor.style.fontFamily = family;
-        editor.style.fontSize = size;
-        lineNumbers.style.fontFamily = family;
-        lineNumbers.style.fontSize = size;
-        setTimeout(() => { updateLineNumbers(); updateStatus(); }, 10);
-    }
-
-    function updateLineNumbers() {
-        const lines = editor.value.split('\n').length;
-        let content = '';
-        for (let i = 1; i <= lines; i++) content += i + '\n';
-        lineNumbers.textContent = content;
-        
-        // --- 修正箇所: スクロール位置の保存と復元 ---
-        const currentScrollTop = editorWrapper.scrollTop;
-        
-        editor.style.height = 'auto'; 
-        editor.style.height = Math.max(editorWrapper.clientHeight, editor.scrollHeight) + 'px';
-        
-        editorWrapper.scrollTop = currentScrollTop;
-        // ------------------------------------------
-    }
-
-    function updateStatus() {
-        const text = editor.value;
-        const pos = editor.selectionStart;
-        const linesBefore = text.substring(0, pos).split('\n');
-        const line = linesBefore.length;
-        const col = linesBefore[line - 1].length + 1;
-        statusBarPos.textContent = `行: ${line}, 列: ${col}`;
-        charCountDisplay.textContent = `文字数: ${text.length}`;
-        const lineHeight = parseFloat(getComputedStyle(editor).lineHeight);
-        document.getElementById('line-highlight').style.top = `${(line - 1) * lineHeight + 10}px`;
-        document.getElementById('line-highlight').style.height = `${lineHeight}px`;
-    }
-
-    // Drag and Drop
-    const dropZone = document.getElementById('drop-zone');
-    window.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.style.display = 'flex';
-    });
-    window.addEventListener('dragleave', (e) => {
-        if (e.relatedTarget === null) dropZone.style.display = 'none';
-    });
-    window.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        dropZone.style.display = 'none';
-        const files = Array.from(e.dataTransfer.files);
-        for (const file of files) {
-            await readFile(file);
-        }
-    });
-
-    async function handleFileSelect(event) {
-        const files = Array.from(event.target.files);
-        for (const file of files) {
-            await readFile(file);
-        }
-        event.target.value = ''; 
-    }
-
-    function readFile(file) {
-        return new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const raw = new Uint8Array(e.target.result);
-                let detected = Encoding.detect(raw);
-                
-                let target = 'UTF8';
-                if (detected === 'SJIS') target = 'SJIS';
-                else if (detected === 'UTF16LE') target = 'UTF16LE';
-                else if (detected === 'UTF16BE') target = 'UTF16BE';
-                else if (detected === 'UTF8') {
-                    if (raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF) {
-                        target = 'UTF8BOM';
-                    }
-                }
-                
-                let fromEnc = target;
-                if (target === 'UTF8BOM') fromEnc = 'UTF8';
-                
-                const unicodeArray = Encoding.convert(raw, { to: 'UNICODE', from: fromEnc });
-                let text = Encoding.codeToString(unicodeArray);
-                
-                if (text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
-                
-                createNewTab(file.name, text, target, raw);
-                resolve();
-            };
-            reader.readAsArrayBuffer(file);
-        });
-    }
-
-    function updateEncodingDisplay(targetEnc) {
-        const labelMap = {
-            'SJIS': 'ANSI (Shift_JIS)',
-            'UTF16LE': 'UTF-16 LE',
-            'UTF16BE': 'UTF-16 BE',
-            'UTF8': 'UTF-8',
-            'UTF8BOM': 'UTF-8 (BOM 付き)'
-        };
-        encDisplay.textContent = labelMap[targetEnc] || 'UTF-8';
-    }
-
-    function applyEncoding(targetEnc) {
-        const tab = tabs.find(t => t.id === activeTabId);
-        if (!tab || !tab.rawData) return;
-        try {
-            let fromEnc = targetEnc;
-            if (targetEnc === 'UTF8BOM') fromEnc = 'UTF8';
-            
-            const unicodeArray = Encoding.convert(tab.rawData, { to: 'UNICODE', from: fromEnc });
-            let text = Encoding.codeToString(unicodeArray);
-            
-            if (text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
-            
-            editor.value = text;
-            tab.encoding = targetEnc;
-            updateEncodingDisplay(targetEnc);
-            updateLineNumbers(); updateStatus();
-        } catch (e) { showAlertModal("エラー", "文字コードの変換に失敗しました。"); }
-    }
-
-    function changeEncoding() {
-        const enc = document.getElementById('encoding').value;
-        const tab = tabs.find(t => t.id === activeTabId);
-        if (tab && tab.rawData) { 
-            applyEncoding(enc); 
-            saveToHistory(); 
-        } else { 
-            updateEncodingDisplay(enc);
-            if(tab) tab.encoding = enc;
-        }
-    }
-
-    // Save File using File System Access API
-    async function saveFile() {
-        const tab = tabs.find(t => t.id === activeTabId);
-        if (!tab) return;
-
-        const text = editor.value;
-        const targetEnc = document.getElementById('encoding').value;
-        const currentName = fileNameInput.value || "untitled.txt";
-        const unicodeArray = Encoding.stringToCode(text);
-        
-        let toEnc = targetEnc;
-        if (targetEnc === 'UTF8BOM') toEnc = 'UTF8';
-        
-        let encodedArray = Encoding.convert(unicodeArray, { to: toEnc, from: 'UNICODE' });
-        
-        // Handle BOM
-        if (targetEnc === 'UTF8BOM') {
-            const bom = [0xEF, 0xBB, 0xBF];
-            const newArray = new Uint8Array(bom.length + encodedArray.length);
-            newArray.set(bom, 0); 
-            newArray.set(encodedArray, bom.length);
-            encodedArray = newArray;
-        } 
-        else if (targetEnc === 'UTF16LE' && (encodedArray[0] !== 0xFF || encodedArray[1] !== 0xFE)) {
-            const bom = [0xFF, 0xFE];
-            const newArray = new Uint8Array(bom.length + encodedArray.length);
-            newArray.set(bom, 0); newArray.set(encodedArray, bom.length);
-            encodedArray = newArray;
-        }
-        else if (targetEnc === 'UTF16BE' && (encodedArray[0] !== 0xFE || encodedArray[1] !== 0xFF)) {
-            const bom = [0xFE, 0xFF];
-            const newArray = new Uint8Array(bom.length + encodedArray.length);
-            newArray.set(bom, 0); newArray.set(encodedArray, bom.length);
-            encodedArray = newArray;
-        }
-
-        const blob = new Blob([new Uint8Array(encodedArray)], { type: 'text/plain' });
-
-        // Use File System Access API if supported
-        if ('showSaveFilePicker' in window) {
-            try {
-                const options = {
-                    suggestedName: currentName,
-                    types: [{
-                        description: 'テキストファイル',
-                        accept: {'text/plain': ['.txt', '.csv', '.html', '.css', '.js', '.json']}
-                    }],
-                };
-                const handle = await window.showSaveFilePicker(options);
-                const writable = await handle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-                
-                // Update tab name on successful save
-                fileNameInput.value = handle.name;
-                updateTabNameFromInput(handle.name);
-                fileInfo.textContent = "保存完了: " + handle.name;
-                setTimeout(() => { fileInfo.textContent = "準備完了"; }, 3000);
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    console.error(err);
-                    showAlertModal("エラー", "ファイルの保存に失敗しました。");
-                }
-            }
-        } else {
-            // Fallback for older browsers
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = currentName; a.click();
-            URL.revokeObjectURL(url);
-            fileInfo.textContent = "ダウンロード完了";
-            setTimeout(() => { fileInfo.textContent = "準備完了"; }, 3000);
-        }
-    }
-
-    function showConfirmModal(title, body, onConfirm) {
-        document.getElementById('modal-title').textContent = title;
-        document.getElementById('modal-body').textContent = body;
-        const footer = document.getElementById('modal-footer');
-        footer.innerHTML = `<button onclick="closeModal()">キャンセル</button><button class="btn-danger" id="confirm-btn">実行</button>`;
-        document.getElementById('confirm-btn').onclick = onConfirm;
-        document.getElementById('modal-overlay').style.display = 'flex';
-    }
-
-    function showAlertModal(title, body) {
-        document.getElementById('modal-title').textContent = title;
-        document.getElementById('modal-body').textContent = body;
-        const footer = document.getElementById('modal-footer');
-        footer.innerHTML = `<button class="btn-primary" onclick="closeModal()">OK</button>`;
-        document.getElementById('modal-overlay').style.display = 'flex';
-    }
-
-    function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
-
-    window.addEventListener('load', () => { 
-        createNewTab();
-        updateStyle(); 
-    });
+});
 </script>
-
 </body>
 </html>
