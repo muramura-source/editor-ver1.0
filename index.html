@@ -7,20 +7,58 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.2.0/encoding.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        /* ================================================================
+           CSS CUSTOM PROPERTIES  — all theme-switchable vars live here.
+           applyTheme() in JS overwrites these at runtime.
+           ================================================================ */
         :root {
-            --bg:        #f0f2f5;
-            --editor-bg: #ffffff;
-            --text:      #1a1d23;
-            --border:    #d1d5db;
-            --accent:    #2563eb;
-            --accent-h:  #1d4ed8;
-            --danger:    #dc2626;
-            --success:   #16a34a;
-            --ln-bg:     #f7f8fa;
-            --ln-fg:     #aaa;
-            --hl-line:   rgba(37,99,235,0.045);
-            --g80:       rgba(255,140,0,0.25);
-            --g120:      rgba(220,0,0,0.18);
+            /* Core */
+            --bg:           #f0f2f5;
+            --editor-bg:    #ffffff;
+            --text:         #1a1d23;
+            --border:       #d1d5db;
+            --accent:       #2563eb;
+            --accent-h:     #1d4ed8;
+            --danger:       #dc2626;
+            --success:      #16a34a;
+            --caret:        #2563eb;
+            /* Gutter / line numbers */
+            --ln-bg:        #f7f8fa;
+            --ln-fg:        #aaa;
+            --hl-line:      rgba(37,99,235,0.045);
+            /* Indent guide */
+            --indent-guide: rgba(0,0,0,0.12);
+            /* Toolbar */
+            --toolbar-top:  #f5f7fa;
+            --toolbar-bot:  #e8eaed;
+            /* Tabs */
+            --tab-bar-bg:   #e8eaed;
+            --tab-active-bg:#ffffff;
+            --tab-drag-bg:  #dbeafe;
+            --tab-hover:    rgba(0,0,0,.06);
+            /* Buttons */
+            --tbtn-hover:        rgba(0,0,0,.08);
+            --tbtn-active-bg:    #dbeafe;
+            --tbtn-active-border:#93c5fd;
+            /* Inputs / selects */
+            --input-bg:     #ffffff;
+            /* Search */
+            --srch-sep:     #ddd;
+            --srch-counter: #999;
+            /* Status bar */
+            --statusbar-top:#e8eaed;
+            --statusbar-bot:#dde0e4;
+            --sb-border:    #ccc;
+            /* Modal / help */
+            --modal-bg:     #ffffff;
+            --modal-text:   #555;
+            --help-h3-color:#888;
+            --help-border:  #eee;
+            --sc-key-bg:    #f3f4f6;
+            --sc-key-border:#d1d5db;
+            --sc-key-shadow:#c8ccd1;
+            --sc-key-text:  #374151;
+            --gutter-legend-bg:#f9fafb;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,9 +73,9 @@
             overflow: hidden;
         }
 
-        /* ── TOOLBAR ────────────────────────────────────────────── */
+        /* ── TOOLBAR ──────────────────────────────────────────────── */
         .toolbar {
-            background: linear-gradient(180deg, #f5f7fa, #e8eaed);
+            background: linear-gradient(180deg, var(--toolbar-top), var(--toolbar-bot));
             border-bottom: 1px solid var(--border);
             padding: 4px 8px;
             display: flex;
@@ -67,9 +105,9 @@
             line-height: 1;
         }
         .tbtn svg { width: 14px; height: 14px; flex-shrink: 0; }
-        .tbtn:hover:not(:disabled) { background: rgba(0,0,0,.08); border-color: var(--border); }
+        .tbtn:hover:not(:disabled) { background: var(--tbtn-hover); border-color: var(--border); }
         .tbtn:disabled  { opacity: .4; cursor: not-allowed; }
-        .tbtn.active    { background: #dbeafe; border-color: #93c5fd; color: var(--accent-h); }
+        .tbtn.active    { background: var(--tbtn-active-bg); border-color: var(--tbtn-active-border); color: var(--accent); }
         .tbtn.primary   { background: var(--accent); color: #fff; border-color: var(--accent); }
         .tbtn.primary:hover { background: var(--accent-h); }
         .tbtn.success   { background: var(--success); color: #fff; border-color: var(--success); }
@@ -77,33 +115,37 @@
 
         .fname-wrap {
             display: flex; align-items: center; gap: 4px;
-            background: #fff; padding: 3px 8px;
+            background: var(--input-bg); padding: 3px 8px;
             border-radius: 5px; border: 1px solid var(--border);
         }
         .fname-wrap input {
             border: none; outline: none; font-size: 13px;
             width: 155px; background: transparent; font-weight: 500;
+            color: var(--text);
         }
 
         .srch-wrap {
             display: flex; align-items: center; gap: 2px;
-            background: #fff; padding: 2px 5px;
+            background: var(--input-bg); padding: 2px 5px;
             border-radius: 5px; border: 1px solid var(--border);
         }
-        .srch-wrap input { border: none; outline: none; font-size: 12px; width: 110px; background: transparent; }
-        .srch-counter { font-size: 11px; color: #999; min-width: 48px; text-align: right; }
+        .srch-wrap input {
+            border: none; outline: none; font-size: 12px;
+            width: 110px; background: transparent; color: var(--text);
+        }
+        .srch-counter { font-size: 11px; color: var(--srch-counter); min-width: 48px; text-align: right; }
         .srch-counter.no-match { color: #e44; }
-        .srch-sep { width: 1px; height: 15px; background: #ddd; margin: 0 2px; }
+        .srch-sep { width: 1px; height: 15px; background: var(--srch-sep); margin: 0 2px; }
 
         select {
             padding: 4px 5px; border-radius: 5px;
-            border: 1px solid var(--border); background: #fff;
+            border: 1px solid var(--border); background: var(--input-bg);
             font-size: 12px; cursor: pointer; color: var(--text);
         }
 
-        /* ── TABS ───────────────────────────────────────────────── */
+        /* ── TABS ────────────────────────────────────────────────── */
         .tab-bar {
-            background: #e8eaed;
+            background: var(--tab-bar-bg);
             display: flex;
             border-bottom: 1px solid var(--border);
             overflow-x: auto;
@@ -120,10 +162,11 @@
             overflow: hidden;
             transition: background .12s;
             user-select: none; flex-shrink: 0;
+            color: var(--text);
         }
-        .tab:hover { background: rgba(0,0,0,.06); }
-        .tab.active { background: #fff; border-bottom: 2px solid var(--accent); font-weight: 600; }
-        .tab.drag-over { background: #dbeafe; }
+        .tab:hover { background: var(--tab-hover); }
+        .tab.active { background: var(--tab-active-bg); border-bottom: 2px solid var(--accent); font-weight: 600; }
+        .tab.drag-over { background: var(--tab-drag-bg); }
         .tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
         .tab-dirty { color: #f59e0b; font-size: 9px; flex-shrink: 0; }
         .tab-close {
@@ -131,33 +174,31 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 13px; line-height: 1; opacity: .45; flex-shrink: 0;
         }
-        .tab-close:hover { background: #bbb; opacity: 1; }
+        .tab-close:hover { background: var(--tbtn-hover); opacity: 1; }
 
-        /* ── MAIN CONTAINER ─────────────────────────────────────── */
+        /* ── MAIN CONTAINER ──────────────────────────────────────── */
         .main-container {
             flex: 1; display: flex; position: relative; overflow: hidden;
             background: var(--editor-bg);
         }
 
-        /* Change gutter (left of line numbers) */
+        /* Change gutter */
         #gutter-wrap {
-            width: 5px;
-            overflow: hidden;
-            background: var(--ln-bg);
-            flex-shrink: 0;
+            width: 5px; overflow: hidden;
+            background: var(--ln-bg); flex-shrink: 0;
         }
         #gutter-inner {
-            width: 5px;
-            position: relative;
-            min-height: 100%;
+            width: 5px; position: relative; min-height: 100%;
         }
 
         /* Line numbers */
         .line-numbers {
-            width: 54px;
+            /* 初期幅は2桁分(+余白)。updateLineNumbers()がJS側で必要に応じて拡張する */
+            width: 34px;
+            min-width: 34px;
             padding: 10px 4px 10px 0;
             background: var(--ln-bg);
-            border-right: 1px solid #e5e7eb;
+            border-right: 1px solid var(--border);
             text-align: right;
             font-family: 'Courier New', Courier, monospace;
             font-size: 14px; line-height: 1.5;
@@ -166,18 +207,25 @@
             overflow: hidden; white-space: pre;
             cursor: pointer;
             flex-shrink: 0;
+            transition: width 0.1s;
         }
 
         /* Editor wrapper */
         .editor-wrapper { flex: 1; position: relative; overflow: auto; }
 
-        /* Column guides */
-        .col-guide {
-            position: absolute; top: 0; bottom: 0; width: 1px;
-            pointer-events: none; z-index: 3; display: none;
+        /* ── INDENT GUIDES ────────────────────────────────────────
+           A single container holds all vertical guide lines.
+           Lines are injected by updateIndentGuides() in JS.
+           ────────────────────────────────────────────────────────── */
+        #indent-guides {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 3;
+            display: none;      /* hidden until toggled */
+            overflow: hidden;
         }
-        #guide-80  { background: var(--g80); }
-        #guide-120 { background: var(--g120); }
+        /* Individual guide lines are <div> children, styled inline by JS */
 
         /* Current line highlight */
         #line-hl {
@@ -198,26 +246,26 @@
             font-family: 'Courier New', Courier, monospace;
             font-size: 14px;
             color: var(--text);
-            caret-color: var(--accent);
+            caret-color: var(--caret);
             display: block;
             overflow: hidden;
         }
 
-        /* ── STATUS BAR ─────────────────────────────────────────── */
+        /* ── STATUS BAR ──────────────────────────────────────────── */
         .statusbar {
-            background: linear-gradient(180deg, #e8eaed, #dde0e4);
+            background: linear-gradient(180deg, var(--statusbar-top), var(--statusbar-bot));
             border-top: 1px solid var(--border);
             padding: 2px 12px;
             display: flex; justify-content: space-between; align-items: center;
-            font-size: 11.5px; color: #555;
+            font-size: 11.5px; color: var(--text);
             height: 23px; flex-shrink: 0; user-select: none;
         }
         .sb-right { display: flex; }
-        .sb-item  { padding: 0 9px; border-left: 1px solid #ccc; }
+        .sb-item  { padding: 0 9px; border-left: 1px solid var(--sb-border); }
         .sb-item:first-child { border-left: none; }
-        .sb-item.click:hover { background: rgba(0,0,0,.06); cursor: pointer; }
+        .sb-item.click:hover { background: var(--tab-hover); cursor: pointer; }
 
-        /* ── DROP ZONE ──────────────────────────────────────────── */
+        /* ── DROP ZONE ───────────────────────────────────────────── */
         #drop-zone {
             display: none; position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -228,7 +276,7 @@
             font-size: 20px; font-weight: bold; color: var(--accent);
         }
 
-        /* ── REGULAR MODAL ──────────────────────────────────────── */
+        /* ── REGULAR MODAL ───────────────────────────────────────── */
         .modal-overlay {
             display: none; position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -236,15 +284,16 @@
             justify-content: center; align-items: center;
         }
         .modal {
-            background: #fff; padding: 24px; border-radius: 10px;
+            background: var(--modal-bg); padding: 24px; border-radius: 10px;
             max-width: 420px; width: 90%;
             box-shadow: 0 8px 32px rgba(0,0,0,.22);
+            color: var(--text);
         }
         .modal h3 { margin-bottom: 10px; font-size: 15px; }
-        .modal p  { color: #555; font-size: 13.5px; }
+        .modal p  { color: var(--modal-text); font-size: 13.5px; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
-        /* ── HELP MODAL ─────────────────────────────────────────── */
+        /* ── HELP MODAL ──────────────────────────────────────────── */
         #help-overlay {
             display: none; position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -252,11 +301,11 @@
             justify-content: center; align-items: center;
         }
         .help-modal {
-            background: #fff; border-radius: 12px;
+            background: var(--modal-bg); border-radius: 12px;
             width: min(680px, 96vw); max-height: 85vh;
             display: flex; flex-direction: column;
             box-shadow: 0 12px 40px rgba(0,0,0,.28);
-            overflow: hidden;
+            overflow: hidden; color: var(--text);
         }
         .help-header {
             padding: 16px 20px;
@@ -268,21 +317,20 @@
         .help-close {
             width: 28px; height: 28px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            border: none; background: transparent; cursor: pointer; font-size: 18px; color: #666;
+            border: none; background: transparent; cursor: pointer;
+            font-size: 18px; color: var(--modal-text);
         }
-        .help-close:hover { background: #f0f0f0; }
-        .help-body {
-            overflow-y: auto; padding: 16px 20px; flex: 1;
-        }
+        .help-close:hover { background: var(--tab-hover); }
+        .help-body { overflow-y: auto; padding: 16px 20px; flex: 1; }
         .help-section { margin-bottom: 20px; }
         .help-section h3 {
             font-size: 12px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: .06em; color: #888; margin-bottom: 8px;
-            padding-bottom: 4px; border-bottom: 1px solid #eee;
+            letter-spacing: .06em; color: var(--help-h3-color); margin-bottom: 8px;
+            padding-bottom: 4px; border-bottom: 1px solid var(--help-border);
         }
         .shortcut-row {
             display: flex; align-items: center;
-            padding: 5px 0; border-bottom: 1px solid #f5f5f5;
+            padding: 5px 0; border-bottom: 1px solid var(--help-border);
             gap: 12px;
         }
         .shortcut-row:last-child { border-bottom: none; }
@@ -291,30 +339,37 @@
             min-width: 200px; flex-shrink: 0;
         }
         .sc-key {
-            background: #f3f4f6; border: 1px solid #d1d5db;
+            background: var(--sc-key-bg); border: 1px solid var(--sc-key-border);
             border-radius: 4px; padding: 2px 6px;
             font-family: 'Courier New', monospace; font-size: 11px;
-            color: #374151; white-space: nowrap;
-            box-shadow: 0 1px 0 #c8ccd1;
+            color: var(--sc-key-text); white-space: nowrap;
+            box-shadow: 0 1px 0 var(--sc-key-shadow);
         }
-        .sc-desc { font-size: 12.5px; color: #444; }
+        .sc-desc { font-size: 12.5px; color: var(--text); }
         .gutter-legend {
             display: flex; gap: 12px; margin-top: 10px;
-            padding: 8px 12px; background: #f9fafb;
+            padding: 8px 12px; background: var(--gutter-legend-bg);
             border-radius: 6px; flex-wrap: wrap;
         }
-        .gl-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; }
+        .gl-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--modal-text); }
         .gl-bar { width: 5px; height: 18px; border-radius: 2px; }
         .help-footer {
             padding: 10px 20px;
             border-top: 1px solid var(--border);
             text-align: right; flex-shrink: 0;
         }
+
+        /* Theme preview swatch in select */
+        .theme-dot {
+            display: inline-block; width: 10px; height: 10px;
+            border-radius: 50%; margin-right: 4px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
 
-<!-- ── TOOLBAR ───────────────────────────────────────────────────────── -->
+<!-- ── TOOLBAR ────────────────────────────────────────────────────────── -->
 <div class="toolbar">
 
     <div class="tgroup">
@@ -398,13 +453,14 @@
         <button class="tbtn" id="wrapBtn" onclick="toggleWordWrap()" title="折り返し">
             <i data-lucide="wrap-text"></i>
         </button>
-        <button class="tbtn" id="guideBtn" onclick="toggleColumnGuides()" title="列ガイド (80 / 120 文字)">
+        <button class="tbtn" id="guideBtn" onclick="toggleIndentGuides()" title="インデントガイド (4列毎)">
             <i data-lucide="ruler"></i>
         </button>
     </div>
 
     <div class="tsep"></div>
 
+    <!-- Font / size -->
     <div class="tgroup">
         <select id="fontFamily" onchange="updateStyle()">
             <option value="'Courier New',Courier,monospace" selected>等幅</option>
@@ -424,6 +480,15 @@
 
     <div class="tsep"></div>
 
+    <!-- Theme selector -->
+    <div class="tgroup">
+        <select id="themeSelect" onchange="applyThemeFromSelect()" title="テーマを切り替え">
+        </select>
+    </div>
+
+    <div class="tsep"></div>
+
+    <!-- Encoding -->
     <div class="tgroup">
         <select id="encoding" onchange="changeEncoding()">
             <option value="SJIS">ANSI (Shift_JIS)</option>
@@ -436,7 +501,7 @@
 
     <div class="tsep"></div>
 
-    <!-- Help button (far right) -->
+    <!-- Help -->
     <div class="tgroup" style="margin-left:auto">
         <button class="tbtn" onclick="showHelp()" title="ショートカット一覧 (F1)">
             <i data-lucide="circle-help"></i>
@@ -444,17 +509,15 @@
     </div>
 </div>
 
-<!-- ── TAB BAR ──────────────────────────────────────────────────────── -->
+<!-- ── TAB BAR ───────────────────────────────────────────────────────── -->
 <div class="tab-bar" id="tab-bar"></div>
 
-<!-- ── MAIN AREA ────────────────────────────────────────────────────── -->
+<!-- ── MAIN AREA ─────────────────────────────────────────────────────── -->
 <div class="main-container">
     <div id="drop-zone">ファイルをドロップして開く</div>
 
-    <!-- Change gutter (left strip, shows modified/added lines) -->
-    <div id="gutter-wrap">
-        <div id="gutter-inner"></div>
-    </div>
+    <!-- Change gutter -->
+    <div id="gutter-wrap"><div id="gutter-inner"></div></div>
 
     <!-- Line numbers -->
     <div class="line-numbers" id="line-numbers">1</div>
@@ -462,13 +525,13 @@
     <!-- Editor -->
     <div class="editor-wrapper" id="editor-wrapper">
         <div id="line-hl"></div>
-        <div class="col-guide" id="guide-80"></div>
-        <div class="col-guide" id="guide-120"></div>
+        <!-- Indent guides container (lines injected by JS) -->
+        <div id="indent-guides"></div>
         <textarea id="editor" spellcheck="false"></textarea>
     </div>
 </div>
 
-<!-- ── STATUS BAR ───────────────────────────────────────────────────── -->
+<!-- ── STATUS BAR ────────────────────────────────────────────────────── -->
 <div class="statusbar">
     <div id="sb-info">準備完了</div>
     <div class="sb-right">
@@ -481,7 +544,7 @@
     </div>
 </div>
 
-<!-- ── REGULAR MODAL ────────────────────────────────────────────────── -->
+<!-- ── REGULAR MODAL ─────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="modal-overlay">
     <div class="modal">
         <h3 id="modal-title">確認</h3>
@@ -490,16 +553,14 @@
     </div>
 </div>
 
-<!-- ── HELP MODAL ───────────────────────────────────────────────────── -->
+<!-- ── HELP MODAL ────────────────────────────────────────────────────── -->
 <div id="help-overlay" onclick="if(event.target===this)closeHelp()">
     <div class="help-modal">
         <div class="help-header">
             <h2>⌨ ショートカット一覧 &amp; 使い方</h2>
             <button class="help-close" onclick="closeHelp()" title="閉じる">×</button>
         </div>
-        <div class="help-body" id="help-body">
-            <!-- Built dynamically -->
-        </div>
+        <div class="help-body" id="help-body"></div>
         <div class="help-footer">
             <button class="tbtn primary" onclick="closeHelp()">閉じる</button>
         </div>
@@ -510,22 +571,21 @@
 /* =====================================================================
    GLOBALS
    ===================================================================== */
-const editor        = document.getElementById('editor');
-const lineNumbers   = document.getElementById('line-numbers');
-const editorWrapper = document.getElementById('editor-wrapper');
-const fileNameInput = document.getElementById('fileNameInput');
-const tabBar        = document.getElementById('tab-bar');
-const undoBtn       = document.getElementById('undoBtn');
-const redoBtn       = document.getElementById('redoBtn');
-const guide80       = document.getElementById('guide-80');
-const guide120      = document.getElementById('guide-120');
-const lineHl        = document.getElementById('line-hl');
-const sbInfo        = document.getElementById('sb-info');
-const gutterWrap    = document.getElementById('gutter-wrap');
-const gutterInner   = document.getElementById('gutter-inner');
+const editor          = document.getElementById('editor');
+const lineNumbers     = document.getElementById('line-numbers');
+const editorWrapper   = document.getElementById('editor-wrapper');
+const fileNameInput   = document.getElementById('fileNameInput');
+const tabBar          = document.getElementById('tab-bar');
+const undoBtn         = document.getElementById('undoBtn');
+const redoBtn         = document.getElementById('redoBtn');
+const indentGuidesEl  = document.getElementById('indent-guides');
+const lineHl          = document.getElementById('line-hl');
+const sbInfo          = document.getElementById('sb-info');
+const gutterWrap      = document.getElementById('gutter-wrap');
+const gutterInner     = document.getElementById('gutter-inner');
 
-const MAX_HISTORY  = 100;
-const AUTO_PAIR    = { '(':')', '[':']', '{':'}' };
+const MAX_HISTORY   = 100;
+const AUTO_PAIR     = { '(':')', '[':']', '{':'}' };
 const CLOSING_CHARS = new Set([')', ']', '}']);
 
 let tabs          = [];
@@ -545,18 +605,286 @@ const _mc  = document.createElement('canvas');
 const _mct = _mc.getContext('2d');
 
 /* =====================================================================
+   THEMES
+   ===================================================================== */
+
+/**
+ * Each theme defines ALL CSS custom properties that vary between themes.
+ * applyTheme() writes them to document.documentElement.style.
+ * Properties not listed fall back to :root defaults.
+ */
+const THEMES = {
+    /* ── LIGHT ──────────────────────────────────────────────────── */
+    'Default Light': {
+        '--bg':'#f0f2f5','--editor-bg':'#ffffff','--text':'#1a1d23',
+        '--border':'#d1d5db','--accent':'#2563eb','--accent-h':'#1d4ed8',
+        '--caret':'#2563eb','--ln-bg':'#f7f8fa','--ln-fg':'#aaa',
+        '--hl-line':'rgba(37,99,235,0.045)','--indent-guide':'rgba(0,0,0,0.12)',
+        '--toolbar-top':'#f5f7fa','--toolbar-bot':'#e8eaed',
+        '--tab-bar-bg':'#e8eaed','--tab-active-bg':'#ffffff',
+        '--tab-drag-bg':'#dbeafe','--tab-hover':'rgba(0,0,0,.06)',
+        '--tbtn-hover':'rgba(0,0,0,.08)',
+        '--tbtn-active-bg':'#dbeafe','--tbtn-active-border':'#93c5fd',
+        '--input-bg':'#ffffff','--srch-sep':'#ddd','--srch-counter':'#999',
+        '--statusbar-top':'#e8eaed','--statusbar-bot':'#dde0e4','--sb-border':'#ccc',
+        '--modal-bg':'#ffffff','--modal-text':'#555',
+        '--help-h3-color':'#888','--help-border':'#eee',
+        '--sc-key-bg':'#f3f4f6','--sc-key-border':'#d1d5db',
+        '--sc-key-shadow':'#c8ccd1','--sc-key-text':'#374151',
+        '--gutter-legend-bg':'#f9fafb',
+    },
+    'GitHub Light': {
+        '--bg':'#f6f8fa','--editor-bg':'#ffffff','--text':'#24292f',
+        '--border':'#d0d7de','--accent':'#0969da','--accent-h':'#0550ae',
+        '--caret':'#0969da','--ln-bg':'#f6f8fa','--ln-fg':'#8c959f',
+        '--hl-line':'rgba(9,105,218,0.04)','--indent-guide':'rgba(0,0,0,0.10)',
+        '--toolbar-top':'#f6f8fa','--toolbar-bot':'#eaeef2',
+        '--tab-bar-bg':'#eaeef2','--tab-active-bg':'#ffffff',
+        '--tab-drag-bg':'#ddf4ff','--tab-hover':'rgba(0,0,0,.06)',
+        '--tbtn-hover':'rgba(0,0,0,.08)',
+        '--tbtn-active-bg':'#ddf4ff','--tbtn-active-border':'#54aeff',
+        '--input-bg':'#ffffff','--srch-sep':'#ddd','--srch-counter':'#999',
+        '--statusbar-top':'#eaeef2','--statusbar-bot':'#e2e8f0','--sb-border':'#ccc',
+        '--modal-bg':'#ffffff','--modal-text':'#555',
+        '--help-h3-color':'#888','--help-border':'#eee',
+        '--sc-key-bg':'#f6f8fa','--sc-key-border':'#d0d7de',
+        '--sc-key-shadow':'#c4cdd6','--sc-key-text':'#24292f',
+        '--gutter-legend-bg':'#f6f8fa',
+    },
+    'Solarized Light': {
+        '--bg':'#eee8d5','--editor-bg':'#fdf6e3','--text':'#657b83',
+        '--border':'#cdc9b8','--accent':'#268bd2','--accent-h':'#1a6fa3',
+        '--caret':'#268bd2','--ln-bg':'#eee8d5','--ln-fg':'#93a1a1',
+        '--hl-line':'rgba(38,139,210,0.06)','--indent-guide':'rgba(0,0,0,0.10)',
+        '--toolbar-top':'#eee8d5','--toolbar-bot':'#e4deca',
+        '--tab-bar-bg':'#e4deca','--tab-active-bg':'#fdf6e3',
+        '--tab-drag-bg':'#d6eaf8','--tab-hover':'rgba(0,0,0,.05)',
+        '--tbtn-hover':'rgba(0,0,0,.07)',
+        '--tbtn-active-bg':'#d6eaf8','--tbtn-active-border':'#93c5fd',
+        '--input-bg':'#fdf6e3','--srch-sep':'#cdc9b8','--srch-counter':'#93a1a1',
+        '--statusbar-top':'#e4deca','--statusbar-bot':'#dacfbd','--sb-border':'#cdc9b8',
+        '--modal-bg':'#fdf6e3','--modal-text':'#586e75',
+        '--help-h3-color':'#93a1a1','--help-border':'#e4deca',
+        '--sc-key-bg':'#eee8d5','--sc-key-border':'#cdc9b8',
+        '--sc-key-shadow':'#bfb9a6','--sc-key-text':'#586e75',
+        '--gutter-legend-bg':'#eee8d5',
+    },
+    /* ── DARK ────────────────────────────────────────────────────── */
+    'One Dark Pro': {
+        '--bg':'#21252b','--editor-bg':'#282c34','--text':'#abb2bf',
+        '--border':'#3d4148','--accent':'#61afef','--accent-h':'#4d9fdf',
+        '--caret':'#61afef','--ln-bg':'#21252b','--ln-fg':'#495162',
+        '--hl-line':'rgba(255,255,255,0.04)','--indent-guide':'rgba(255,255,255,0.10)',
+        '--toolbar-top':'#2c313a','--toolbar-bot':'#21252b',
+        '--tab-bar-bg':'#21252b','--tab-active-bg':'#282c34',
+        '--tab-drag-bg':'#3a3f4b','--tab-hover':'rgba(255,255,255,.06)',
+        '--tbtn-hover':'rgba(255,255,255,.08)',
+        '--tbtn-active-bg':'rgba(97,175,239,0.15)','--tbtn-active-border':'rgba(97,175,239,0.4)',
+        '--input-bg':'#1d2127','--srch-sep':'#3d4148','--srch-counter':'#636d83',
+        '--statusbar-top':'#21252b','--statusbar-bot':'#1c1f26','--sb-border':'#3d4148',
+        '--modal-bg':'#2c313a','--modal-text':'#abb2bf',
+        '--help-h3-color':'#636d83','--help-border':'#3d4148',
+        '--sc-key-bg':'#1d2127','--sc-key-border':'#3d4148',
+        '--sc-key-shadow':'#1a1d22','--sc-key-text':'#abb2bf',
+        '--gutter-legend-bg':'#21252b',
+    },
+    'Monokai': {
+        '--bg':'#1e1f1c','--editor-bg':'#272822','--text':'#f8f8f2',
+        '--border':'#3e3d32','--accent':'#a6e22e','--accent-h':'#8ac520',
+        '--caret':'#f8f8f0','--ln-bg':'#1e1f1c','--ln-fg':'#75715e',
+        '--hl-line':'rgba(255,255,255,0.04)','--indent-guide':'rgba(255,255,255,0.09)',
+        '--toolbar-top':'#232420','--toolbar-bot':'#1e1f1c',
+        '--tab-bar-bg':'#1e1f1c','--tab-active-bg':'#272822',
+        '--tab-drag-bg':'#3e3d32','--tab-hover':'rgba(255,255,255,.06)',
+        '--tbtn-hover':'rgba(255,255,255,.08)',
+        '--tbtn-active-bg':'rgba(166,226,46,0.12)','--tbtn-active-border':'rgba(166,226,46,0.35)',
+        '--input-bg':'#1a1b18','--srch-sep':'#3e3d32','--srch-counter':'#75715e',
+        '--statusbar-top':'#1e1f1c','--statusbar-bot':'#191916','--sb-border':'#3e3d32',
+        '--modal-bg':'#2d2e27','--modal-text':'#f8f8f2',
+        '--help-h3-color':'#75715e','--help-border':'#3e3d32',
+        '--sc-key-bg':'#1a1b18','--sc-key-border':'#3e3d32',
+        '--sc-key-shadow':'#151613','--sc-key-text':'#f8f8f2',
+        '--gutter-legend-bg':'#1e1f1c',
+    },
+    'Dracula': {
+        '--bg':'#21222c','--editor-bg':'#282a36','--text':'#f8f8f2',
+        '--border':'#44475a','--accent':'#bd93f9','--accent-h':'#a67de8',
+        '--caret':'#f8f8f2','--ln-bg':'#21222c','--ln-fg':'#6272a4',
+        '--hl-line':'rgba(255,255,255,0.05)','--indent-guide':'rgba(255,255,255,0.09)',
+        '--toolbar-top':'#252632','--toolbar-bot':'#21222c',
+        '--tab-bar-bg':'#21222c','--tab-active-bg':'#282a36',
+        '--tab-drag-bg':'#44475a','--tab-hover':'rgba(255,255,255,.06)',
+        '--tbtn-hover':'rgba(255,255,255,.08)',
+        '--tbtn-active-bg':'rgba(189,147,249,0.15)','--tbtn-active-border':'rgba(189,147,249,0.4)',
+        '--input-bg':'#1e1f29','--srch-sep':'#44475a','--srch-counter':'#6272a4',
+        '--statusbar-top':'#21222c','--statusbar-bot':'#1c1d26','--sb-border':'#44475a',
+        '--modal-bg':'#282a36','--modal-text':'#f8f8f2',
+        '--help-h3-color':'#6272a4','--help-border':'#44475a',
+        '--sc-key-bg':'#1e1f29','--sc-key-border':'#44475a',
+        '--sc-key-shadow':'#191a22','--sc-key-text':'#f8f8f2',
+        '--gutter-legend-bg':'#21222c',
+    },
+    'Nord': {
+        '--bg':'#2e3440','--editor-bg':'#2e3440','--text':'#d8dee9',
+        '--border':'#434c5e','--accent':'#88c0d0','--accent-h':'#6fb3c5',
+        '--caret':'#88c0d0','--ln-bg':'#272c38','--ln-fg':'#4c566a',
+        '--hl-line':'rgba(136,192,208,0.08)','--indent-guide':'rgba(216,222,233,0.10)',
+        '--toolbar-top':'#3b4252','--toolbar-bot':'#2e3440',
+        '--tab-bar-bg':'#272c38','--tab-active-bg':'#2e3440',
+        '--tab-drag-bg':'#434c5e','--tab-hover':'rgba(255,255,255,.06)',
+        '--tbtn-hover':'rgba(255,255,255,.08)',
+        '--tbtn-active-bg':'rgba(136,192,208,0.15)','--tbtn-active-border':'rgba(136,192,208,0.4)',
+        '--input-bg':'#272c38','--srch-sep':'#434c5e','--srch-counter':'#4c566a',
+        '--statusbar-top':'#272c38','--statusbar-bot':'#242933','--sb-border':'#434c5e',
+        '--modal-bg':'#3b4252','--modal-text':'#d8dee9',
+        '--help-h3-color':'#4c566a','--help-border':'#434c5e',
+        '--sc-key-bg':'#272c38','--sc-key-border':'#434c5e',
+        '--sc-key-shadow':'#1e2430','--sc-key-text':'#d8dee9',
+        '--gutter-legend-bg':'#272c38',
+    },
+    'Tokyo Night': {
+        '--bg':'#16161e','--editor-bg':'#1a1b2e','--text':'#a9b1d6',
+        '--border':'#292e42','--accent':'#7aa2f7','--accent-h':'#6090e8',
+        '--caret':'#7aa2f7','--ln-bg':'#16161e','--ln-fg':'#363b54',
+        '--hl-line':'rgba(122,162,247,0.07)','--indent-guide':'rgba(169,177,214,0.10)',
+        '--toolbar-top':'#1a1b2e','--toolbar-bot':'#16161e',
+        '--tab-bar-bg':'#16161e','--tab-active-bg':'#1a1b2e',
+        '--tab-drag-bg':'#292e42','--tab-hover':'rgba(255,255,255,.06)',
+        '--tbtn-hover':'rgba(255,255,255,.08)',
+        '--tbtn-active-bg':'rgba(122,162,247,0.15)','--tbtn-active-border':'rgba(122,162,247,0.4)',
+        '--input-bg':'#13131f','--srch-sep':'#292e42','--srch-counter':'#363b54',
+        '--statusbar-top':'#16161e','--statusbar-bot':'#131319','--sb-border':'#292e42',
+        '--modal-bg':'#1a1b2e','--modal-text':'#a9b1d6',
+        '--help-h3-color':'#363b54','--help-border':'#292e42',
+        '--sc-key-bg':'#13131f','--sc-key-border':'#292e42',
+        '--sc-key-shadow':'#0f0f19','--sc-key-text':'#a9b1d6',
+        '--gutter-legend-bg':'#16161e',
+    },
+    'Night Owl': {
+        '--bg':'#011221','--editor-bg':'#011627','--text':'#d6deeb',
+        '--border':'#122d42','--accent':'#82aaff','--accent-h':'#6a96f0',
+        '--caret':'#82aaff','--ln-bg':'#011221','--ln-fg':'#1d3b53',
+        '--hl-line':'rgba(130,170,255,0.07)','--indent-guide':'rgba(214,222,235,0.09)',
+        '--toolbar-top':'#011c2e','--toolbar-bot':'#011221',
+        '--tab-bar-bg':'#011221','--tab-active-bg':'#011627',
+        '--tab-drag-bg':'#122d42','--tab-hover':'rgba(255,255,255,.06)',
+        '--tbtn-hover':'rgba(255,255,255,.08)',
+        '--tbtn-active-bg':'rgba(130,170,255,0.15)','--tbtn-active-border':'rgba(130,170,255,0.4)',
+        '--input-bg':'#010e1a','--srch-sep':'#122d42','--srch-counter':'#1d3b53',
+        '--statusbar-top':'#011221','--statusbar-bot':'#010d1b','--sb-border':'#122d42',
+        '--modal-bg':'#011627','--modal-text':'#d6deeb',
+        '--help-h3-color':'#1d3b53','--help-border':'#122d42',
+        '--sc-key-bg':'#010e1a','--sc-key-border':'#122d42',
+        '--sc-key-shadow':'#010912','--sc-key-text':'#d6deeb',
+        '--gutter-legend-bg':'#011221',
+    },
+    'Cobalt2': {
+        '--bg':'#122538','--editor-bg':'#193549','--text':'#ffffff',
+        '--border':'#1f4060','--accent':'#ffc600','--accent-h':'#e6b200',
+        '--caret':'#ffc600','--ln-bg':'#122538','--ln-fg':'#1f5068',
+        '--hl-line':'rgba(255,198,0,0.07)','--indent-guide':'rgba(255,255,255,0.09)',
+        '--toolbar-top':'#163045','--toolbar-bot':'#122538',
+        '--tab-bar-bg':'#122538','--tab-active-bg':'#193549',
+        '--tab-drag-bg':'#1f4060','--tab-hover':'rgba(255,255,255,.06)',
+        '--tbtn-hover':'rgba(255,255,255,.08)',
+        '--tbtn-active-bg':'rgba(255,198,0,0.15)','--tbtn-active-border':'rgba(255,198,0,0.4)',
+        '--input-bg':'#0e1f30','--srch-sep':'#1f4060','--srch-counter':'#1f5068',
+        '--statusbar-top':'#122538','--statusbar-bot':'#0e1f30','--sb-border':'#1f4060',
+        '--modal-bg':'#193549','--modal-text':'#ffffff',
+        '--help-h3-color':'#1f5068','--help-border':'#1f4060',
+        '--sc-key-bg':'#0e1f30','--sc-key-border':'#1f4060',
+        '--sc-key-shadow':'#0a1824','--sc-key-text':'#ffffff',
+        '--gutter-legend-bg':'#122538',
+    },
+    'Solarized Dark': {
+        '--bg':'#00212b','--editor-bg':'#002b36','--text':'#839496',
+        '--border':'#073642','--accent':'#268bd2','--accent-h':'#1a6fa3',
+        '--caret':'#268bd2','--ln-bg':'#00212b','--ln-fg':'#586e75',
+        '--hl-line':'rgba(38,139,210,0.07)','--indent-guide':'rgba(131,148,150,0.12)',
+        '--toolbar-top':'#00252f','--toolbar-bot':'#00212b',
+        '--tab-bar-bg':'#00212b','--tab-active-bg':'#002b36',
+        '--tab-drag-bg':'#073642','--tab-hover':'rgba(255,255,255,.06)',
+        '--tbtn-hover':'rgba(255,255,255,.08)',
+        '--tbtn-active-bg':'rgba(38,139,210,0.15)','--tbtn-active-border':'rgba(38,139,210,0.4)',
+        '--input-bg':'#001e27','--srch-sep':'#073642','--srch-counter':'#586e75',
+        '--statusbar-top':'#00212b','--statusbar-bot':'#001c24','--sb-border':'#073642',
+        '--modal-bg':'#002b36','--modal-text':'#839496',
+        '--help-h3-color':'#586e75','--help-border':'#073642',
+        '--sc-key-bg':'#001e27','--sc-key-border':'#073642',
+        '--sc-key-shadow':'#00171e','--sc-key-text':'#839496',
+        '--gutter-legend-bg':'#00212b',
+    },
+};
+
+/**
+ * Theme metadata: label shown in dropdown + one-line description.
+ * swatch: editor-bg color used as the colored square.
+ * fg: readable text color FOR THE OPTION ELEMENT (always set explicitly
+ *     to avoid the OS rendering the option in the theme's own dark color).
+ */
+const THEME_META = {
+    'Default Light':  { swatch:'#ffffff', fg:'#1a1d23', desc:'シンプルな白背景（標準）' },
+    'GitHub Light':   { swatch:'#ffffff', fg:'#24292f', desc:'GitHub配色の明るいライト' },
+    'Solarized Light':{ swatch:'#fdf6e3', fg:'#657b83', desc:'クリーム背景・目に優しい' },
+    'One Dark Pro':   { swatch:'#282c34', fg:'#abb2bf', desc:'青みグレー背景・定番ダーク' },
+    'Monokai':        { swatch:'#272822', fg:'#f8f8f2', desc:'深緑がかった黒・鮮やかな配色' },
+    'Dracula':        { swatch:'#282a36', fg:'#f8f8f2', desc:'紫がかった黒・柔らかいダーク' },
+    'Nord':           { swatch:'#2e3440', fg:'#d8dee9', desc:'北欧調の青グレー・落ち着いた印象' },
+    'Tokyo Night':    { swatch:'#1a1b2e', fg:'#a9b1d6', desc:'深夜の東京をイメージした濃紺' },
+    'Night Owl':      { swatch:'#011627', fg:'#d6deeb', desc:'深いネイビー・夜間作業向け' },
+    'Cobalt2':        { swatch:'#193549', fg:'#ffffff', desc:'鮮やかな黄色アクセントのネイビー' },
+    'Solarized Dark': { swatch:'#002b36', fg:'#839496', desc:'ティール背景・科学的設計の配色' },
+};
+
+/** Apply a named theme by setting CSS custom properties on <html> */
+function applyTheme(name) {
+    const t = THEMES[name];
+    if (!t) return;
+    const root = document.documentElement;
+    Object.keys(THEMES['Default Light']).forEach(k => root.style.removeProperty(k));
+    Object.entries(t).forEach(([k, v]) => root.style.setProperty(k, v));
+    try { localStorage.setItem('editorTheme', name); } catch (_) {}
+}
+
+function applyThemeFromSelect() {
+    applyTheme(document.getElementById('themeSelect').value);
+}
+
+/** Populate the theme <select> and restore last-used theme */
+function initThemeSelect() {
+    const sel     = document.getElementById('themeSelect');
+    const saved   = (() => { try { return localStorage.getItem('editorTheme'); } catch(_){return null;} })();
+    const current = (saved && THEMES[saved]) ? saved : 'Default Light';
+
+    Object.keys(THEME_META).forEach(name => {
+        const meta = THEME_META[name];
+        const opt  = document.createElement('option');
+        opt.value    = name;
+        opt.selected = name === current;
+        // Always use the theme's own fg/swatch colors so text is readable
+        // regardless of the OS or browser dark-mode.
+        opt.style.backgroundColor = meta.swatch;
+        opt.style.color           = meta.fg;
+        // Label: swatch square + name + description
+        opt.textContent = `■ ${name}（${meta.desc}）`;
+        sel.appendChild(opt);
+    });
+
+    applyTheme(current);
+}
+
+/* =====================================================================
    TAB MANAGEMENT
    ===================================================================== */
 function createNewTab(name = 'untitled.txt', content = '', encoding = 'UTF8', raw = null) {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     tabs.push({
         id, name, content, encoding, rawData: raw,
-        baselineContent: content,          // For change gutter
+        baselineContent: content,
         history: [{ value: content, ss: 0, se: 0 }],
         histIdx: 0, scrollTop: 0,
         isDirty: false, wordWrap: false
     });
-    // NOTE: do NOT call renderTabs() here — switchTab() will do it
     switchTab(id);
 }
 
@@ -595,40 +923,25 @@ function renderTabs() {
         div.appendChild(closeEl);
         tabBar.appendChild(div);
     });
-    // NOTE: lucide.createIcons() is NOT called here
-    // (icons are static in toolbar HTML; re-calling here caused timing/display bugs)
 }
 
-/* ── Tab drag-and-drop reorder ────────────────────────────────────── */
+/* Tab drag-and-drop reorder */
 function onTabDragStart(e) {
     draggedTabId = e.currentTarget.dataset.tabId;
     e.dataTransfer.effectAllowed = 'move';
 }
-
 function onTabDragOver(e) {
-    // Only style as drag-over for TAB drags (not file drags from OS)
     if (!draggedTabId) return;
     e.preventDefault();
     e.currentTarget.classList.add('drag-over');
 }
-
-function onTabDragLeave(e) {
-    e.currentTarget.classList.remove('drag-over');
-}
-
+function onTabDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
 function onTabDrop(e) {
     e.currentTarget.classList.remove('drag-over');
-
-    // FIX: If this is a FILE drag from OS (not a tab drag), let the window handler process it.
-    // We detect this by checking draggedTabId — it is only set via onTabDragStart.
     if (!draggedTabId) return;
-
-    e.preventDefault(); // Prevent browser from navigating to file
-    e.stopPropagation(); // Stop window drop handler from also running for tab reorder
-
+    e.preventDefault(); e.stopPropagation();
     const targetId = e.currentTarget.dataset.tabId;
     if (draggedTabId === targetId) { draggedTabId = null; return; }
-
     const fi = tabs.findIndex(t => t.id === draggedTabId);
     const ti = tabs.findIndex(t => t.id === targetId);
     const [moved] = tabs.splice(fi, 1);
@@ -636,17 +949,13 @@ function onTabDrop(e) {
     draggedTabId = null;
     renderTabs();
 }
-
-// FIX: Always clear draggedTabId when drag ends (catches cancel/drop-outside cases)
 function onTabDragEnd() {
     draggedTabId = null;
-    // Remove any lingering drag-over styles
     document.querySelectorAll('.tab.drag-over').forEach(el => el.classList.remove('drag-over'));
 }
 
 function switchTab(id) {
     if (activeTabId === id) return;
-    // Save current tab state
     if (activeTabId) {
         const cur = getTab(activeTabId);
         if (cur) {
@@ -658,49 +967,41 @@ function switchTab(id) {
     activeTabId = id;
     const tab = getTab(id);
     if (!tab) return;
-
     editor.value = tab.content;
     fileNameInput.value = tab.name;
     document.getElementById('encoding').value = tab.encoding;
     editor.style.whiteSpace = tab.wordWrap ? 'pre-wrap' : 'pre';
     document.getElementById('wrapBtn').classList.toggle('active', !!tab.wordWrap);
     updateEncodingDisplay(tab.encoding);
-
     renderTabs();
     lastLineCount = 0;
     updateLineNumbers();
     updateStatus();
     updateUndoButtons();
     updateGutter();
-
     requestAnimationFrame(() => { editorWrapper.scrollTop = tab.scrollTop; });
 }
 
 function closeTab(id) {
     const idx = tabs.findIndex(t => t.id === id);
     if (tabs.length === 1) {
-        // FIX: Reset the only tab directly (bypasses the switchTab guard)
         const t = tabs[0];
         t.content = ''; t.name = 'untitled.txt';
         t.baselineContent = ''; t.rawData = null;
         t.isDirty = false; t.wordWrap = false;
         t.history = [{ value: '', ss: 0, se: 0 }]; t.histIdx = 0;
-        // Direct UI update (do not call switchTab — it guards against same-id)
         editor.value = '';
         fileNameInput.value = 'untitled.txt';
         editor.style.whiteSpace = 'pre';
         document.getElementById('wrapBtn').classList.remove('active');
         lastLineCount = 0;
-        updateLineNumbers();
-        updateStatus();
-        updateUndoButtons();
-        updateGutter();
-        renderTabs();
+        updateLineNumbers(); updateStatus(); updateUndoButtons();
+        updateGutter(); renderTabs();
         return;
     }
     tabs = tabs.filter(t => t.id !== id);
     if (activeTabId === id) {
-        activeTabId = null; // force full switch
+        activeTabId = null;
         switchTab(tabs[Math.max(0, idx - 1)].id);
     } else {
         renderTabs();
@@ -747,11 +1048,9 @@ function redo() {
 
 function applyHistory(tab) {
     const s           = tab.history[tab.histIdx];
-    const savedScroll = editorWrapper.scrollTop; // スクロール位置を退避
-    editor.value      = s.value;                 // ← ここでカーソルが0にリセットされる
-    editor.setSelectionRange(s.ss, s.se);        // 保存済みカーソル位置を復元
-    // setSelectionRange後にブラウザがカーソルへ自動スクロールする場合があるため
-    // rAFでスクロール位置を上書き復元する
+    const savedScroll = editorWrapper.scrollTop;
+    editor.value      = s.value;
+    editor.setSelectionRange(s.ss, s.se);
     requestAnimationFrame(() => { editorWrapper.scrollTop = savedScroll; });
     updateLineNumbers(); updateStatus(); updateUndoButtons();
     scheduleGutterUpdate();
@@ -764,7 +1063,7 @@ function updateUndoButtons() {
 }
 
 /* =====================================================================
-   SEARCH  — BUG FIX: never steal focus from search input
+   SEARCH
    ===================================================================== */
 function buildMatches() {
     const q = document.getElementById('searchInput').value;
@@ -786,7 +1085,7 @@ function buildMatches() {
 function findNearestMatch() {
     if (searchMatches.length === 0) { matchIndex = -1; return; }
     const pos = editor.selectionStart;
-    const i = searchMatches.findIndex(m => m.start >= pos);
+    const i   = searchMatches.findIndex(m => m.start >= pos);
     matchIndex = i === -1 ? 0 : i;
 }
 
@@ -795,12 +1094,10 @@ function refreshCounter() {
     const q  = document.getElementById('searchInput').value;
     if (!q)                         { el.textContent = '';       el.className = 'srch-counter'; return; }
     if (searchMatches.length === 0) { el.textContent = '0 件'; el.className = 'srch-counter no-match'; return; }
-    el.className = 'srch-counter';
-    el.textContent = `${matchIndex + 1} / ${searchMatches.length}`;
+    el.className    = 'srch-counter';
+    el.textContent  = `${matchIndex + 1} / ${searchMatches.length}`;
 }
 
-// FIX: keepFocus=true → do NOT call editor.focus() (called from search input)
-//      keepFocus=false → DO focus editor (called from buttons/keyboard)
 function jumpToMatch(keepFocus = false) {
     if (matchIndex < 0 || matchIndex >= searchMatches.length) { refreshCounter(); return; }
     const m = searchMatches[matchIndex];
@@ -817,30 +1114,18 @@ function scrollToChar(charIdx) {
     editorWrapper.scrollTop = Math.max(0, lineIdx * lh + 10 - editorWrapper.clientHeight / 2);
 }
 
-// Called by oninput on search box — never steals focus
-function onSearchInput() {
-    buildMatches();
-    findNearestMatch();
-    jumpToMatch(true); // keepFocus = true
-}
+function onSearchInput()   { buildMatches(); findNearestMatch(); jumpToMatch(true); }
 
-// Handle Enter/Shift+Enter in search box
 function onSearchKeydown(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        e.shiftKey ? searchPrev() : searchNextBtn();
-    }
-    if (e.key === 'Escape') {
-        editor.focus();
-    }
+    if (e.key === 'Enter')  { e.preventDefault(); e.shiftKey ? searchPrev() : searchNextBtn(); }
+    if (e.key === 'Escape') { editor.focus(); }
 }
 
-// Called by Next button / F3 — focuses editor
 function searchNextBtn() {
     buildMatches();
     if (searchMatches.length === 0) { refreshCounter(); return; }
     matchIndex = matchIndex < 0 ? 0 : (matchIndex + 1) % searchMatches.length;
-    jumpToMatch(false); // moves focus to editor
+    jumpToMatch(false);
 }
 
 function searchPrev() {
@@ -879,8 +1164,7 @@ function replaceCurrent() {
         jumpToMatch(false);
     } else {
         editor.setSelectionRange(m.start, m.end);
-        scrollToChar(m.start);
-        refreshCounter();
+        scrollToChar(m.start); refreshCounter();
     }
     updateLineNumbers(); updateStatus();
 }
@@ -900,24 +1184,19 @@ function replaceAll() {
     editor.value = text;
     markDirty(); saveToHistory();
     buildMatches(); matchIndex = -1; refreshCounter();
-    updateLineNumbers(); updateStatus();
-    scheduleGutterUpdate();
+    updateLineNumbers(); updateStatus(); scheduleGutterUpdate();
     showAlertModal('置換完了', `${count} 箇所の置換を行いました。`);
 }
 
 /* =====================================================================
    CHANGE GUTTER  (per-line modified/added indicator)
    ===================================================================== */
-
-/* Compute similarity score between two strings (0–1).
-   Used to distinguish "modified" lines from "added" lines. */
 function simScore(a, b) {
     if (a === b) return 1;
     const ta = a.trim(), tb = b.trim();
     if (!ta && !tb) return 1;
     if (!ta || !tb) return 0;
     const longer = Math.max(ta.length, tb.length);
-    // Character-level overlap
     let matches = 0;
     const bArr = [...tb];
     for (const c of ta) {
@@ -927,53 +1206,37 @@ function simScore(a, b) {
     return matches / longer;
 }
 
-/* Returns array of 'unchanged' | 'added' | 'modified' for each current line. */
 function computeLineStatus(baseLines, curLines) {
     const m = baseLines.length, n = curLines.length;
     if (m === 0) return new Array(n).fill(n > 0 ? 'added' : 'unchanged');
     if (n === 0) return [];
-
-    // Large files: use fast positional comparison
     if (m > 1500 || n > 1500) {
         return curLines.map((line, i) =>
             i >= m ? 'added' : line === baseLines[i] ? 'unchanged' : 'modified'
         );
     }
-
-    // LCS-based diff using dp table (accurate)
     const dp = Array.from({ length: m + 1 }, () => new Uint16Array(n + 1));
-    for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
+    for (let i = 1; i <= m; i++)
+        for (let j = 1; j <= n; j++)
             dp[i][j] = baseLines[i-1] === curLines[j-1]
-                ? dp[i-1][j-1] + 1
-                : Math.max(dp[i-1][j], dp[i][j-1]);
-        }
-    }
+                ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
 
-    // Traceback — mark which current lines and base lines are in the LCS
     const curInLCS  = new Array(n).fill(false);
     const baseInLCS = new Array(m).fill(false);
     let i = m, j = n;
     while (i > 0 && j > 0) {
         if (baseLines[i-1] === curLines[j-1]) {
-            curInLCS[j-1] = true; baseInLCS[i-1] = true;
-            i--; j--;
-        } else if (dp[i-1][j] >= dp[i][j-1]) { i--; }
-        else { j--; }
+            curInLCS[j-1] = true; baseInLCS[i-1] = true; i--; j--;
+        } else if (dp[i-1][j] >= dp[i][j-1]) { i--; } else { j--; }
     }
-
-    // Collect deleted base lines (not in LCS) for similarity comparison
     const deletedBase = baseLines
         .map((line, bi) => ({ bi, line }))
         .filter(({ bi }) => !baseInLCS[bi]);
 
-    // Determine status for each current line
     return curLines.map((curLine, ci) => {
         if (curInLCS[ci]) return 'unchanged';
-        // Is there a nearby deleted base line with similar content? → modified
-        for (const { bi, line } of deletedBase) {
+        for (const { bi, line } of deletedBase)
             if (Math.abs(bi - ci) <= 4 && simScore(line, curLine) > 0.38) return 'modified';
-        }
         return 'added';
     });
 }
@@ -986,37 +1249,32 @@ function scheduleGutterUpdate() {
 function updateGutter() {
     const tab = getTab(activeTabId);
     if (!tab) { gutterInner.innerHTML = ''; return; }
-
-    const baseline = tab.baselineContent || '';
+    const baseline = tab.baselineContent ?? '';   // null/undefined → ''
     const current  = editor.value;
-
-    if (!baseline || baseline === current) {
+    // FIX: was `if (!baseline || ...)` — empty string '' is falsy,
+    // so a file opened as empty would never show gutter marks.
+    // Now we only skip when content is truly identical.
+    if (baseline === current) {
         gutterInner.innerHTML = '';
         gutterInner.style.height = '0';
         return;
     }
-
     const baseLines = baseline.split(/\r?\n/);
     const curLines  = current.split(/\r?\n/);
     const status    = computeLineStatus(baseLines, curLines);
-
-    const lh     = parseFloat(getComputedStyle(editor).lineHeight);
-    const totalH = curLines.length * lh + 20;
-    gutterInner.style.height = totalH + 'px';
+    const lh        = parseFloat(getComputedStyle(editor).lineHeight);
+    const totalH    = curLines.length * lh + 20;
+    gutterInner.style.height   = totalH + 'px';
     gutterInner.style.position = 'relative';
-
-    // Build HTML: group consecutive same-status lines into single elements (efficient)
     let html = '';
     let ci = 0;
     while (ci < status.length) {
-        const s = status[ci];
-        let end = ci;
+        const s = status[ci]; let end = ci;
         while (end < status.length && status[end] === s) end++;
         if (s !== 'unchanged') {
-            const top  = 10 + ci * lh;
-            const h    = (end - ci) * lh;
-            const bg   = s === 'added' ? '#22c55e' : '#f59e0b';
-            const tip  = s === 'added' ? `追加された行 (${ci+1}–${end}行)` : `変更された行 (${ci+1}–${end}行)`;
+            const top = 10 + ci * lh, h = (end - ci) * lh;
+            const bg  = s === 'added' ? '#22c55e' : '#f59e0b';
+            const tip = s === 'added' ? `追加された行 (${ci+1}–${end}行)` : `変更された行 (${ci+1}–${end}行)`;
             html += `<div title="${tip}" style="position:absolute;top:${top}px;left:0;width:100%;height:${h}px;background:${bg};border-radius:0 2px 2px 0;opacity:0.85;cursor:default"></div>`;
         }
         ci = end;
@@ -1025,94 +1283,84 @@ function updateGutter() {
 }
 
 /* =====================================================================
-   LINE NUMBERS & STATUS
+   LINE NUMBERS  (with wrap-aware Method B)
    ===================================================================== */
-
-/**
- * 折り返しモード用: 1論理行がcanvas計測で何視覚行になるか返す。
- * タブはtab-size:4として展開し、等幅フォントの文字幅で割る。
- * @param {string} line      - 論理行の文字列
- * @param {number} availWidth - 利用可能な幅(px) = エディター幅 - 左右padding
- */
 function getVisualRowCount(line, availWidth) {
     if (line === '') return 1;
-    // タブを4スペース相当に展開（CSS tab-size:4 に対応）
     let expanded = '', col = 0;
     for (const ch of line) {
-        if (ch === '\t') {
-            const sp = 4 - (col % 4);
-            expanded += ' '.repeat(sp);
-            col += sp;
-        } else {
-            expanded += ch;
-            col++;
-        }
+        if (ch === '\t') { const sp = 4 - (col % 4); expanded += ' '.repeat(sp); col += sp; }
+        else             { expanded += ch; col++; }
     }
     const w = _mct.measureText(expanded).width;
     return Math.max(1, Math.ceil(w / availWidth));
 }
 
-/**
- * 折り返しモード用: 方式B（VS Code方式）で行番号テキストを生成してセットする。
- * 論理行の先頭視覚行にだけ番号を表示し、折り返し続行行は空白行にする。
- * 例: 3行折り返しなら "5\n\n\n" のように出力する。
- */
 function renderWrappedLineNumbers(logicalLines) {
-    _mct.font = getComputedStyle(editor).font;
-    // エディターの左右 padding は各 10px → 合計 20px を差し引く
+    _mct.font   = getComputedStyle(editor).font;
     const avail = Math.max(1, editorWrapper.clientWidth - 20);
     let ln = '';
     for (let i = 0; i < logicalLines.length; i++) {
         const rows = getVisualRowCount(logicalLines[i], avail);
-        ln += (i + 1) + '\n';                         // 先頭視覚行: 論理行番号
-        for (let r = 1; r < rows; r++) ln += '\n';    // 折り返し続行行: 空白
+        ln += (i + 1) + '\n';
+        for (let r = 1; r < rows; r++) ln += '\n';
     }
     lineNumbers.textContent = ln;
-    lastLineCount = -1; // 非折り返しモードへ戻ったとき必ず再描画させるためにキャッシュを無効化
+    lastLineCount = -1;
 }
 
 function updateLineNumbers() {
-    // レイアウト確定前（clientHeight === 0）は次フレームに延期
     if (editorWrapper.clientHeight === 0) {
         requestAnimationFrame(updateLineNumbers);
         return;
     }
-
     const text      = editor.value;
     const lineCount = (text.match(/\n/g) || []).length + 1;
     const tab       = getTab(activeTabId);
     const isWrap    = tab && tab.wordWrap;
 
-    if (isWrap) {
-        // ── 折り返しモード: 方式B（VS Code方式）──────────────────────
-        // 内容・幅・フォントが変わるたびに再計算が必要なため lastLineCount 最適化をスキップ
-        renderWrappedLineNumbers(text.split('\n'));
+    // ── 桁数に応じて行番号エリアの幅を自動調整 ──────────────────────
+    // 最低2桁分を確保。必要に応じて1桁増えるごとに拡張。
+    // 1桁=約9px(等幅14px)、余白(右4px+左余裕4px)=8px、最低2桁=26px+8=34px
+    const digits   = String(lineCount).length;
+    const minDigits = Math.max(2, digits);
+    // 文字幅はcanvasで実測（フォント変更時も正確）
+    _mct.font = getComputedStyle(lineNumbers).font;
+    const charW  = _mct.measureText('0').width;
+    const newW   = Math.ceil(minDigits * charW) + 12; // 12px = 左右余白合計
+    if (parseInt(lineNumbers.style.width) !== newW) {
+        lineNumbers.style.width    = newW + 'px';
+        lineNumbers.style.minWidth = newW + 'px';
+    }
+    // ────────────────────────────────────────────────────────────────
 
+    if (isWrap) {
+        renderWrappedLineNumbers(text.split('\n'));
         const saved = editorWrapper.scrollTop;
         editor.style.height = 'auto';
         editor.style.height = Math.max(editorWrapper.clientHeight, editor.scrollHeight) + 'px';
         editorWrapper.scrollTop = saved;
     } else {
-        // ── 非折り返しモード: 高速な連番描画 ────────────────────────
         if (lineCount !== lastLineCount) {
             lastLineCount = lineCount;
             let ln = '';
             for (let i = 1; i <= lineCount; i++) ln += i + '\n';
             lineNumbers.textContent = ln;
         }
-        // リフローなしで高さ計算
         const lh     = parseFloat(getComputedStyle(editor).lineHeight);
         const needed = Math.max(editorWrapper.clientHeight, lineCount * lh + 20);
-        if (Math.abs((parseInt(editor.style.height) || 0) - needed) > 1) {
+        if (Math.abs((parseInt(editor.style.height) || 0) - needed) > 1)
             editor.style.height = needed + 'px';
-        }
     }
 }
 
+/* =====================================================================
+   STATUS BAR
+   ===================================================================== */
 function updateStatus() {
-    const text  = editor.value;
-    const ss    = editor.selectionStart;
-    const se    = editor.selectionEnd;
+    const text   = editor.value;
+    const ss     = editor.selectionStart;
+    const se     = editor.selectionEnd;
     const before = text.substring(0, ss);
     const lineNum = (before.match(/\n/g) || []).length + 1;
     const col     = ss - before.lastIndexOf('\n');
@@ -1127,9 +1375,7 @@ function updateStatus() {
         const selLen   = se - ss;
         const selLines = (text.substring(ss, se).match(/\n/g) || []).length + 1;
         selEl.textContent = `選択: ${selLen}文字 (${selLines}行)`;
-    } else {
-        selEl.textContent = '';
-    }
+    } else { selEl.textContent = ''; }
 
     const eolEl = document.getElementById('sb-eol');
     eolEl.textContent = text.includes('\r\n') ? 'CRLF' : text.includes('\r') ? 'CR' : 'LF';
@@ -1160,30 +1406,43 @@ function toggleWordWrap() {
     updateLineNumbers();
 }
 
-function toggleColumnGuides() {
+/* ── INDENT GUIDES ────────────────────────────────────────────────────
+   Draws 1px vertical lines at every 4-character column boundary.
+   Lines are absolutely positioned in #indent-guides (z-index 3).
+   We draw enough columns to cover the widest possible editor width.
+   ────────────────────────────────────────────────────────────────── */
+function toggleIndentGuides() {
     guidesVisible = !guidesVisible;
     document.getElementById('guideBtn').classList.toggle('active', guidesVisible);
-    guide80.style.display  = guidesVisible ? 'block' : 'none';
-    guide120.style.display = guidesVisible ? 'block' : 'none';
-    if (guidesVisible) updateColumnGuides();
+    indentGuidesEl.style.display = guidesVisible ? 'block' : 'none';
+    if (guidesVisible) updateIndentGuides();
 }
 
-function updateColumnGuides() {
+function updateIndentGuides() {
     if (!guidesVisible) return;
-    const canvas = document.createElement('canvas');
-    const ctx    = canvas.getContext('2d');
-    ctx.font     = getComputedStyle(editor).font;
-    const cw     = ctx.measureText('M').width;
-    guide80.style.left  = Math.round(10 + 80  * cw) + 'px';
-    guide120.style.left = Math.round(10 + 120 * cw) + 'px';
+
+    _mct.font = getComputedStyle(editor).font;
+    // Width of exactly 4 spaces (1 indent level)
+    const cw4     = _mct.measureText('    ').width;  // 4-space width in px
+    const pad     = 10;                              // editor left padding
+    const edW     = editorWrapper.scrollWidth || editorWrapper.clientWidth;
+    const maxCols = Math.ceil((edW - pad) / cw4) + 2; // enough columns + buffer
+
+    let html = '';
+    for (let col = 1; col <= maxCols; col++) {
+        const x = Math.round(pad + col * cw4);
+        html += `<div style="position:absolute;top:0;bottom:0;left:${x}px;width:1px;background:var(--indent-guide)"></div>`;
+    }
+    indentGuidesEl.innerHTML = html;
 }
 
 /* =====================================================================
    EXCEL FORMULA TOOLS
+   選択範囲がある場合はその範囲のみ処理。
+   選択なし（ss === se）の場合はテキスト全体を処理。
    ===================================================================== */
-function formatExcelFormula() {
-    const formula = editor.value.trim();
-    if (!formula) return;
+function _processFormula(formula) {
+    // 整形ロジック本体（文字列→文字列）
     let result = '', inStr = false, curLen = 0, lastTok = '';
     const stack = [];
     const clean = formula.replace(/\s+/g, ' ');
@@ -1211,14 +1470,11 @@ function formatExcelFormula() {
             if (/[A-Za-z0-9_]/.test(ch)) lastTok += ch; else lastTok = '';
         }
     }
-    editor.value = result;
-    markDirty(); saveToHistory(); lastLineCount = 0; updateLineNumbers(); updateStatus();
-    scheduleGutterUpdate();
+    return result;
 }
 
-function unformatExcelFormula() {
-    const formula = editor.value;
-    if (!formula) return;
+function _unprocessFormula(formula) {
+    // 解除ロジック本体（文字列→文字列）
     let result = '', inStr = false;
     for (const ch of formula) {
         if (ch === '"') { inStr = !inStr; result += ch; continue; }
@@ -1226,7 +1482,41 @@ function unformatExcelFormula() {
         if (ch === '\n' || ch === '\r') continue;
         result += ch;
     }
-    editor.value = result.replace(/\s+/g, ' ').replace(/,\s*/g, ',').trim();
+    return result.replace(/\s+/g, ' ').replace(/,\s*/g, ',').trim();
+}
+
+function formatExcelFormula() {
+    const ss = editor.selectionStart, se = editor.selectionEnd;
+    if (ss === se) {
+        // 選択なし → 全体
+        const formula = editor.value.trim();
+        if (!formula) return;
+        editor.value = _processFormula(formula);
+    } else {
+        // 選択あり → 選択範囲のみ
+        const sel = editor.value.substring(ss, se).trim();
+        if (!sel) return;
+        const processed = _processFormula(sel);
+        editor.setRangeText(processed, ss, se, 'select');
+    }
+    markDirty(); saveToHistory(); lastLineCount = 0; updateLineNumbers(); updateStatus();
+    scheduleGutterUpdate();
+}
+
+function unformatExcelFormula() {
+    const ss = editor.selectionStart, se = editor.selectionEnd;
+    if (ss === se) {
+        // 選択なし → 全体
+        const formula = editor.value;
+        if (!formula) return;
+        editor.value = _unprocessFormula(formula);
+    } else {
+        // 選択あり → 選択範囲のみ
+        const sel = editor.value.substring(ss, se);
+        if (!sel) return;
+        const processed = _unprocessFormula(sel);
+        editor.setRangeText(processed, ss, se, 'select');
+    }
     markDirty(); saveToHistory(); lastLineCount = 0; updateLineNumbers(); updateStatus();
     scheduleGutterUpdate();
 }
@@ -1239,7 +1529,7 @@ editor.addEventListener('keydown', e => {
     const end   = editor.selectionEnd;
     const text  = editor.value;
 
-    /* Tab / Shift+Tab ─────────────────────────────────────────── */
+    /* Tab / Shift+Tab */
     if (e.key === 'Tab') {
         e.preventDefault();
         if (start === end) {
@@ -1269,7 +1559,7 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Home: smart jump ────────────────────────────────────────── */
+    /* Home: smart jump */
     if (e.key === 'Home' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         const lineStart   = text.lastIndexOf('\n', start - 1) + 1;
@@ -1287,7 +1577,7 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Alt+↑/↓: move line ──────────────────────────────────────── */
+    /* Alt+↑/↓: move line */
     if (e.altKey && !e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
         const lineStart = text.lastIndexOf('\n', start - 1) + 1;
@@ -1315,7 +1605,7 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Auto bracket completion ──────────────────────────────────── */
+    /* Auto bracket completion */
     if (AUTO_PAIR[e.key]) {
         e.preventDefault();
         const closing = AUTO_PAIR[e.key];
@@ -1331,7 +1621,7 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Skip over closing bracket ───────────────────────────────── */
+    /* Skip over closing bracket */
     if (CLOSING_CHARS.has(e.key) && start === end && text[start] === e.key) {
         e.preventDefault();
         editor.setSelectionRange(start + 1, start + 1);
@@ -1339,7 +1629,7 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Backspace: delete matching pair ────────────────────────── */
+    /* Backspace: delete matching pair */
     if (e.key === 'Backspace' && start === end && start > 0) {
         const prev = text[start - 1], next = text[start];
         if (AUTO_PAIR[prev] === next) {
@@ -1350,7 +1640,7 @@ editor.addEventListener('keydown', e => {
         }
     }
 
-    /* Enter: preserve / smart indent ──────────────────────────── */
+    /* Enter: preserve / smart indent */
     if (e.key === 'Enter') {
         const lineStart   = text.lastIndexOf('\n', start - 1) + 1;
         const lineContent = text.substring(lineStart, start);
@@ -1359,7 +1649,6 @@ editor.addEventListener('keydown', e => {
         const prevChar    = text[start - 1];
         const nextChar    = text[start];
 
-        // 括弧ペアの中でEnter → 内側にインデントを展開（({[ の直後 )} の直前）
         if (prevChar && AUTO_PAIR[prevChar] === nextChar) {
             e.preventDefault();
             const ins = '\n' + indent + '\t' + '\n' + indent;
@@ -1369,8 +1658,6 @@ editor.addEventListener('keydown', e => {
             return;
         }
 
-        // FIX: インデントを引き継ぐのは「行にインデント以外の文字がある場合のみ」
-        // 空白だけの行（= 連続Enterで作られた空インデント行）では引き継がない
         const lineHasContent = lineContent.trim().length > 0;
         if (indent && lineHasContent) {
             e.preventDefault();
@@ -1385,24 +1672,21 @@ editor.addEventListener('keydown', e => {
    ===================================================================== */
 window.addEventListener('keydown', e => {
     const ctrl = e.ctrlKey || e.metaKey;
-
     if (e.key === 'F1')  { e.preventDefault(); showHelp(); return; }
     if (e.key === 'F3')  { e.preventDefault(); e.shiftKey ? searchPrev() : searchNextBtn(); return; }
-
     if (ctrl) {
         switch (e.key.toLowerCase()) {
-            case 's': e.preventDefault(); saveFile();        return;
+            case 's': e.preventDefault(); saveFile();     return;
             case 'z': e.preventDefault(); e.shiftKey ? redo() : undo(); return;
-            case 'y': e.preventDefault(); redo();            return;
-            case 'n': e.preventDefault(); createNewTab();    return;
+            case 'y': e.preventDefault(); redo();         return;
+            case 'n': e.preventDefault(); createNewTab(); return;
             case 'f': e.preventDefault();
                 document.getElementById('searchInput').focus();
                 document.getElementById('searchInput').select();
                 return;
-            case 'd': e.preventDefault(); duplicateLine();   return;
+            case 'd': e.preventDefault(); duplicateLine(); return;
         }
     }
-
     if (e.altKey && !ctrl) {
         if (e.key.toLowerCase() === 'c') { e.preventDefault(); toggleCase();  return; }
         if (e.key.toLowerCase() === 'r') { e.preventDefault(); toggleRegex(); return; }
@@ -1435,28 +1719,75 @@ editor.addEventListener('input', () => {
     clearTimeout(inputTimer);
     inputTimer = setTimeout(saveToHistory, 600);
     scheduleGutterUpdate();
+    // Re-render guides when content changes (width may have changed in wrap mode)
+    if (guidesVisible) updateIndentGuides();
 });
 
 editorWrapper.addEventListener('scroll', () => {
     lineNumbers.scrollTop = editorWrapper.scrollTop;
-    gutterWrap.scrollTop  = editorWrapper.scrollTop; // sync change gutter
+    gutterWrap.scrollTop  = editorWrapper.scrollTop;
 });
 
 ['click', 'keyup', 'focus', 'mouseup'].forEach(ev => editor.addEventListener(ev, updateStatus));
 
-/* Line number click → select line */
-lineNumbers.addEventListener('click', e => {
-    const lh     = parseFloat(getComputedStyle(editor).lineHeight);
-    const clickY = e.offsetY + lineNumbers.scrollTop - 10;
-    const li     = Math.max(0, Math.floor(clickY / lh));
-    const lines  = editor.value.split('\n');
-    if (li >= lines.length) return;
-    let pos = 0;
-    for (let i = 0; i < li; i++) pos += lines[i].length + 1;
-    editor.focus();
-    editor.setSelectionRange(pos, pos + lines[li].length);
-    updateStatus();
+/* Line number area: click = select line, drag = select multiple lines */
+(function () {
+    let dragging    = false;
+    let dragAnchorLine = -1; // logical line index at drag start
+
+    function lineIndexAt(offsetY) {
+        const lh = parseFloat(getComputedStyle(editor).lineHeight);
+        return Math.max(0, Math.floor((offsetY + lineNumbers.scrollTop - 10) / lh));
+    }
+
+    function lineRange(lines, li) {
+        // Returns {start, end} character positions for logical line li
+        let pos = 0;
+        for (let i = 0; i < li; i++) pos += lines[i].length + 1;
+        return { start: pos, end: pos + lines[li].length };
+    }
+
+    lineNumbers.addEventListener('mousedown', e => {
+        e.preventDefault(); // prevent text selection in line-number column itself
+        const lines = editor.value.split('\n');
+        const li    = lineIndexAt(e.offsetY);
+        if (li >= lines.length) return;
+
+        dragging       = true;
+        dragAnchorLine = li;
+
+        const { start, end } = lineRange(lines, li);
+        editor.focus();
+        editor.setSelectionRange(start, end);
+        updateStatus();
+    });
+
+    window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        const lines = editor.value.split('\n');
+        // Translate window-level mouse position to lineNumbers-local offsetY
+        const rect   = lineNumbers.getBoundingClientRect();
+        const localY = e.clientY - rect.top;
+        const li     = Math.min(Math.max(0, lineIndexAt(localY)), lines.length - 1);
+
+        const anchorRange  = lineRange(lines, dragAnchorLine);
+        const currentRange = lineRange(lines, li);
+
+        // Select from anchor to current, always covering full lines
+        const selStart = Math.min(anchorRange.start, currentRange.start);
+        const selEnd   = Math.max(anchorRange.end,   currentRange.end);
+        editor.setSelectionRange(selStart, selEnd);
+        updateStatus();
+    });
+
+    window.addEventListener('mouseup', () => { dragging = false; });
+})();
+
+/* Re-calculate guides when editor wrapper is resized */
+const _guideResizeObserver = new ResizeObserver(() => {
+    if (guidesVisible) updateIndentGuides();
 });
+_guideResizeObserver.observe(editorWrapper);
 
 /* =====================================================================
    STYLE  (font / size)
@@ -1470,7 +1801,8 @@ function updateStyle() {
     lineNumbers.style.fontSize   = size;
     setTimeout(() => {
         lastLineCount = 0;
-        updateLineNumbers(); updateStatus(); updateColumnGuides();
+        updateLineNumbers(); updateStatus();
+        if (guidesVisible) updateIndentGuides();
     }, 10);
 }
 
@@ -1522,7 +1854,7 @@ function readFile(file) {
             const raw    = new Uint8Array(ev.target.result);
             let detected = Encoding.detect(raw);
             let target   = 'UTF8';
-            if (detected === 'SJIS')    target = 'SJIS';
+            if (detected === 'SJIS')         target = 'SJIS';
             else if (detected === 'UTF16LE') target = 'UTF16LE';
             else if (detected === 'UTF16BE') target = 'UTF16BE';
             else if (detected === 'UTF8' && raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF)
@@ -1569,11 +1901,9 @@ async function saveFile() {
             await w.write(blob); await w.close();
             fileNameInput.value = handle.name;
             updateTabNameFromInput(handle.name);
-            // Reset baseline → gutter clears after save
             tab.baselineContent = text;
             tab.isDirty = false;
-            renderTabs();
-            updateGutter();
+            renderTabs(); updateGutter();
             sbInfo.textContent = '保存完了: ' + handle.name;
             setTimeout(() => sbInfo.textContent = '準備完了', 3000);
         } catch (err) {
@@ -1595,12 +1925,12 @@ async function saveFile() {
    DRAG & DROP (files onto editor area)
    ===================================================================== */
 const dropZone = document.getElementById('drop-zone');
-window.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.display = 'flex'; });
+window.addEventListener('dragover',  e => { e.preventDefault(); dropZone.style.display = 'flex'; });
 window.addEventListener('dragleave', e => { if (!e.relatedTarget) dropZone.style.display = 'none'; });
 window.addEventListener('drop', async e => {
     e.preventDefault(); dropZone.style.display = 'none';
     const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return; // tab reorder drop — already handled
+    if (files.length === 0) return;
     for (const f of files) await readFile(f);
 });
 
@@ -1635,61 +1965,62 @@ const SHORTCUTS = [
     {
         cat: 'ファイル操作',
         items: [
-            { keys: ['Ctrl+S'],          desc: '保存' },
-            { keys: ['Ctrl+N'],          desc: '新規タブを開く' },
-            { keys: ['Ctrl+W / × ボタン'], desc: 'タブを閉じる（最後の1枚はリセット）' },
+            { keys: ['Ctrl+S'],                   desc: '保存' },
+            { keys: ['Ctrl+N'],                   desc: '新規タブを開く' },
+            { keys: ['Ctrl+W', '× ボタン'],        desc: 'タブを閉じる（最後の1枚はリセット）' },
         ]
     },
     {
         cat: '編集操作',
         items: [
-            { keys: ['Ctrl+Z'],          desc: '元に戻す' },
-            { keys: ['Ctrl+Y', 'Ctrl+Shift+Z'], desc: 'やり直し' },
-            { keys: ['Ctrl+D'],          desc: '現在行を直下に複製' },
-            { keys: ['Tab'],             desc: 'インデント（複数行選択時は一括）' },
-            { keys: ['Shift+Tab'],       desc: 'アウトデント（一括も可）' },
-            { keys: ['Alt+↑ / Alt+↓'],  desc: '現在行を上下に移動' },
-            { keys: ['Home'],            desc: '行頭スマートジャンプ（非空白 ↔ 真の行頭）' },
-            { keys: ['( [ {'],           desc: '括弧を自動補完・選択範囲を括弧で囲む' },
-            { keys: ['Backspace'],       desc: '対応する括弧ペアを一括削除' },
-            { keys: ['Enter'],           desc: '自動インデント維持（括弧内は内側に展開）' },
+            { keys: ['Ctrl+Z'],                   desc: '元に戻す' },
+            { keys: ['Ctrl+Y', 'Ctrl+Shift+Z'],   desc: 'やり直し' },
+            { keys: ['Ctrl+D'],                   desc: '現在行を直下に複製' },
+            { keys: ['Tab'],                      desc: 'インデント（複数行選択時は一括）' },
+            { keys: ['Shift+Tab'],                desc: 'アウトデント（一括も可）' },
+            { keys: ['Alt+↑', 'Alt+↓'],           desc: '現在行を上下に移動' },
+            { keys: ['Home'],                     desc: '行頭スマートジャンプ（非空白 ↔ 真の行頭）' },
+            { keys: ['( [ {'],                    desc: '括弧を自動補完・選択範囲を括弧で囲む' },
+            { keys: ['Backspace'],                desc: '対応する括弧ペアを一括削除' },
+            { keys: ['Enter'],                    desc: '自動インデント維持（括弧内は内側に展開）' },
         ]
     },
     {
         cat: '検索・置換',
         items: [
-            { keys: ['Ctrl+F'],          desc: '検索ボックスにフォーカス' },
-            { keys: ['F3'],              desc: '次を検索' },
-            { keys: ['Shift+F3'],        desc: '前を検索' },
-            { keys: ['Enter'],           desc: '検索ボックス内で次へ' },
-            { keys: ['Shift+Enter'],     desc: '検索ボックス内で前へ' },
-            { keys: ['Escape'],          desc: '検索ボックスを閉じてエディターに戻る' },
-            { keys: ['Alt+C'],           desc: '大文字/小文字の区別 切替' },
-            { keys: ['Alt+R'],           desc: '正規表現モード 切替' },
-            { keys: ['✓ ボタン'],        desc: '現在のマッチを置換して次へ' },
-            { keys: ['≫ ボタン'],        desc: '全件を一括置換' },
+            { keys: ['Ctrl+F'],                   desc: '検索ボックスにフォーカス' },
+            { keys: ['F3'],                       desc: '次を検索' },
+            { keys: ['Shift+F3'],                 desc: '前を検索' },
+            { keys: ['Enter'],                    desc: '検索ボックス内で次へ' },
+            { keys: ['Shift+Enter'],              desc: '検索ボックス内で前へ' },
+            { keys: ['Escape'],                   desc: '検索ボックスを閉じてエディターに戻る' },
+            { keys: ['Alt+C'],                    desc: '大文字/小文字の区別 切替' },
+            { keys: ['Alt+R'],                    desc: '正規表現モード 切替' },
+            { keys: ['✓ ボタン'],                  desc: '現在のマッチを置換して次へ' },
+            { keys: ['≫ ボタン'],                  desc: '全件を一括置換' },
         ]
     },
     {
         cat: '表示・ナビゲーション',
         items: [
-            { keys: ['行番号クリック'],   desc: 'その行全体を選択' },
-            { keys: ['折り返し ボタン'],  desc: '行の折り返し表示 ON/OFF（タブごとに保持）' },
-            { keys: ['ルーラー ボタン'],  desc: '80・120文字位置に列ガイド線を表示' },
-            { keys: ['改行コードクリック'], desc: 'ステータスバーの LF/CRLF クリックで変換' },
+            { keys: ['行番号クリック'],              desc: 'その行全体を選択' },
+            { keys: ['折り返し ボタン'],             desc: '行の折り返し表示 ON/OFF（タブごとに保持）' },
+            { keys: ['ルーラー ボタン'],             desc: 'インデントガイド（4列毎）の表示 ON/OFF' },
+            { keys: ['改行コードクリック'],           desc: 'ステータスバーの LF/CRLF クリックで変換' },
+            { keys: ['テーマ選択'],                 desc: 'ツールバーのドロップダウンで11種のテーマを切り替え' },
         ]
     },
     {
         cat: 'タブ管理',
         items: [
-            { keys: ['タブをドラッグ'],  desc: 'タブを並び替え（ドラッグ＆ドロップ）' },
-            { keys: ['ファイルをD&D'],   desc: 'エディター・タブバーにドロップしてファイルを開く' },
+            { keys: ['タブをドラッグ'],              desc: 'タブを並び替え（ドラッグ＆ドロップ）' },
+            { keys: ['ファイルをD&D'],              desc: 'エディターにドロップしてファイルを開く' },
         ]
     },
     {
-        cat: 'F1',
+        cat: 'その他',
         items: [
-            { keys: ['F1'],              desc: 'このショートカット一覧を表示' },
+            { keys: ['F1'],                       desc: 'このショートカット一覧を表示' },
         ]
     }
 ];
@@ -1708,7 +2039,7 @@ function showHelp() {
                 <span>変更された行（保存後に内容が変わった行）</span>
             </div>
             <div class="gl-item">
-                <div class="gl-bar" style="background:transparent;border:1px solid #ddd"></div>
+                <div class="gl-bar" style="background:transparent;border:1px solid var(--border)"></div>
                 <span>変更なし（保存時と同じ内容）</span>
             </div>
         </div>`;
@@ -1722,11 +2053,7 @@ function showHelp() {
                     </div>`;
         }).join('');
         const extra = sec.cat === '表示・ナビゲーション' ? gutterLegend : '';
-        return `<div class="help-section">
-                    <h3>${sec.cat}</h3>
-                    ${rows}
-                    ${extra}
-                </div>`;
+        return `<div class="help-section"><h3>${sec.cat}</h3>${rows}${extra}</div>`;
     }).join('');
 
     body.innerHTML = sections;
@@ -1741,12 +2068,10 @@ function closeHelp() {
    INIT
    ===================================================================== */
 window.addEventListener('load', () => {
-    // Initialize lucide icons ONCE here only (not inside renderTabs)
     lucide.createIcons();
-
+    initThemeSelect();   // populate dropdown + apply saved/default theme
     createNewTab();
 
-    // Defer initial layout-dependent updates until after CSS has been applied
     requestAnimationFrame(() => {
         updateStyle();
         lastLineCount = 0;
