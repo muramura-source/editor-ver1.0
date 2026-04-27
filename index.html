@@ -746,10 +746,13 @@ function redo() {
 }
 
 function applyHistory(tab) {
-    const s = tab.history[tab.histIdx];
-    editor.value = s.value;
-    editor.focus();
-    editor.setSelectionRange(s.ss, s.se);
+    const s           = tab.history[tab.histIdx];
+    const savedScroll = editorWrapper.scrollTop; // スクロール位置を退避
+    editor.value      = s.value;                 // ← ここでカーソルが0にリセットされる
+    editor.setSelectionRange(s.ss, s.se);        // 保存済みカーソル位置を復元
+    // setSelectionRange後にブラウザがカーソルへ自動スクロールする場合があるため
+    // rAFでスクロール位置を上書き復元する
+    requestAnimationFrame(() => { editorWrapper.scrollTop = savedScroll; });
     updateLineNumbers(); updateStatus(); updateUndoButtons();
     scheduleGutterUpdate();
 }
