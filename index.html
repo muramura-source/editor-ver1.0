@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Web Editor</title>
+    <title>Web Editor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.2.0/encoding.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -1303,6 +1303,8 @@ editor.addEventListener('keydown', e => {
         const indent      = indentMatch ? indentMatch[0] : '';
         const prevChar    = text[start - 1];
         const nextChar    = text[start];
+
+        // 括弧ペアの中でEnter → 内側にインデントを展開（({[ の直後 )} の直前）
         if (prevChar && AUTO_PAIR[prevChar] === nextChar) {
             e.preventDefault();
             const ins = '\n' + indent + '\t' + '\n' + indent;
@@ -1311,7 +1313,11 @@ editor.addEventListener('keydown', e => {
             markDirty(); updateLineNumbers(); updateStatus();
             return;
         }
-        if (indent) {
+
+        // FIX: インデントを引き継ぐのは「行にインデント以外の文字がある場合のみ」
+        // 空白だけの行（= 連続Enterで作られた空インデント行）では引き継がない
+        const lineHasContent = lineContent.trim().length > 0;
+        if (indent && lineHasContent) {
             e.preventDefault();
             editor.setRangeText('\n' + indent, start, end, 'end');
             markDirty(); updateLineNumbers(); updateStatus();
