@@ -540,6 +540,10 @@ let inputTimer    = null;
 let gutterTimer   = null;
 let draggedTabId  = null;
 
+// 折り返しモード用の行数計測キャンバス（1度だけ生成して使い回す）
+const _mc  = document.createElement('canvas');
+const _mct = _mc.getContext('2d');
+
 /* =====================================================================
    TAB MANAGEMENT
    ===================================================================== */
@@ -1020,8 +1024,52 @@ function updateGutter() {
 /* =====================================================================
    LINE NUMBERS & STATUS
    ===================================================================== */
+
+/**
+ * 折り返しモード用: 1論理行がcanvas計測で何視覚行になるか返す。
+ * タブはtab-size:4として展開し、等幅フォントの文字幅で割る。
+ * @param {string} line      - 論理行の文字列
+ * @param {number} availWidth - 利用可能な幅(px) = エディター幅 - 左右padding
+ */
+function getVisualRowCount(line, availWidth) {
+    if (line === '') return 1;
+    // タブを4スペース相当に展開（CSS tab-size:4 に対応）
+    let expanded = '', col = 0;
+    for (const ch of line) {
+        if (ch === '\t') {
+            const sp = 4 - (col % 4);
+            expanded += ' '.repeat(sp);
+            col += sp;
+        } else {
+            expanded += ch;
+            col++;
+        }
+    }
+    const w = _mct.measureText(expanded).width;
+    return Math.max(1, Math.ceil(w / availWidth));
+}
+
+/**
+ * 折り返しモード用: 方式B（VS Code方式）で行番号テキストを生成してセットする。
+ * 論理行の先頭視覚行にだけ番号を表示し、折り返し続行行は空白行にする。
+ * 例: 3行折り返しなら "5\n\n\n" のように出力する。
+ */
+function renderWrappedLineNumbers(logicalLines) {
+    _mct.font = getComputedStyle(editor).font;
+    // エディターの左右 padding は各 10px → 合計 20px を差し引く
+    const avail = Math.max(1, editorWrapper.clientWidth - 20);
+    let ln = '';
+    for (let i = 0; i < logicalLines.length; i++) {
+        const rows = getVisualRowCount(logicalLines[i], avail);
+        ln += (i + 1) + '\n';                         // 先頭視覚行: 論理行番号
+        for (let r = 1; r < rows; r++) ln += '\n';    // 折り返し続行行: 空白
+    }
+    lineNumbers.textContent = ln;
+    lastLineCount = -1; // 非折り返しモードへ戻ったとき必ず再描画させるためにキャッシュを無効化
+}
+
 function updateLineNumbers() {
-    // FIX: Guard against calling before layout is ready
+    // レイアウト確定前（clientHeight === 0）は次フレームに延期
     if (editorWrapper.clientHeight === 0) {
         requestAnimationFrame(updateLineNumbers);
         return;
@@ -1029,23 +1077,27 @@ function updateLineNumbers() {
 
     const text      = editor.value;
     const lineCount = (text.match(/\n/g) || []).length + 1;
+    const tab       = getTab(activeTabId);
+    const isWrap    = tab && tab.wordWrap;
 
-    // Only re-render line numbers text when count changes
-    if (lineCount !== lastLineCount) {
-        lastLineCount = lineCount;
-        let ln = '';
-        for (let i = 1; i <= lineCount; i++) ln += i + '\n';
-        lineNumbers.textContent = ln;
-    }
+    if (isWrap) {
+        // ── 折り返しモード: 方式B（VS Code方式）──────────────────────
+        // 内容・幅・フォントが変わるたびに再計算が必要なため lastLineCount 最適化をスキップ
+        renderWrappedLineNumbers(text.split('\n'));
 
-    const tab = getTab(activeTabId);
-    if (tab && tab.wordWrap) {
         const saved = editorWrapper.scrollTop;
         editor.style.height = 'auto';
         editor.style.height = Math.max(editorWrapper.clientHeight, editor.scrollHeight) + 'px';
         editorWrapper.scrollTop = saved;
     } else {
-        // No-reflow height calculation from line count
+        // ── 非折り返しモード: 高速な連番描画 ────────────────────────
+        if (lineCount !== lastLineCount) {
+            lastLineCount = lineCount;
+            let ln = '';
+            for (let i = 1; i <= lineCount; i++) ln += i + '\n';
+            lineNumbers.textContent = ln;
+        }
+        // リフローなしで高さ計算
         const lh     = parseFloat(getComputedStyle(editor).lineHeight);
         const needed = Math.max(editorWrapper.clientHeight, lineCount * lh + 20);
         if (Math.abs((parseInt(editor.style.height) || 0) - needed) > 1) {
