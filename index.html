@@ -694,35 +694,59 @@ function renderSearchHighlights() {
     const q = document.getElementById('searchInput').value;
     if (!q || searchMatches.length === 0) return;
 
-    _mct.font = getComputedStyle(editor).font;
-    const lh   = parseFloat(getComputedStyle(editor).lineHeight);
-    const pad  = 10; // editor padding (top / left)
+    const cs  = getComputedStyle(editor);
+    _mct.font = cs.font;
+
+    // lineHeight が "normal" の場合に備えてフォントサイズから計算
+    let lh = parseFloat(cs.lineHeight);
+    if (!lh || isNaN(lh)) lh = parseFloat(cs.fontSize) * 1.5;
+
+    const pad  = 10; // editor の top/left padding
     const text = editor.value;
     const frag = document.createDocumentFragment();
 
+    // テキスト全体の行頭オフセット配列を事前計算（高速化）
+    const lineOffsets = [0];
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '\n') lineOffsets.push(i + 1);
+    }
+
     searchMatches.forEach((m, idx) => {
         const isCurrent = idx === matchIndex;
-        const bg = isCurrent ? 'rgba(255,140,0,0.62)' : 'rgba(255,220,0,0.28)';
 
         // マッチが複数行にまたがる場合にも対応
-        const matchLines = text.substring(m.start, m.end).split('\n');
+        const matchText  = text.substring(m.start, m.end);
+        const matchLines = matchText.split('\n');
         let charPos = m.start;
 
         matchLines.forEach(mLine => {
-            const before    = text.substring(0, charPos);
-            const prevLines = before.split('\n');
-            const lineIdx   = prevLines.length - 1;
-            const linePrefix = prevLines[lineIdx];
+            // 行インデックスを lineOffsets で正確に求める
+            let lineIdx = 0;
+            for (let i = lineOffsets.length - 1; i >= 0; i--) {
+                if (lineOffsets[i] <= charPos) { lineIdx = i; break; }
+            }
+            const lineStart  = lineOffsets[lineIdx];
+            const linePrefix = text.substring(lineStart, charPos);
 
             const x = pad + _mct.measureText(expandTabs(linePrefix)).width;
             const y = lineIdx * lh + pad;
             const w = Math.max(_mct.measureText(expandTabs(mLine)).width, 3);
 
             const div = document.createElement('div');
-            div.style.cssText =
-                `position:absolute;top:${y}px;left:${x}px;` +
-                `width:${w}px;height:${lh}px;` +
-                `background:${bg};pointer-events:none;border-radius:2px;`;
+            if (isCurrent) {
+                // 現在のマッチ：しっかり塗り
+                div.style.cssText =
+                    `position:absolute;top:${y}px;left:${x}px;` +
+                    `width:${w}px;height:${lh}px;` +
+                    `background:rgba(255,140,0,0.55);pointer-events:none;border-radius:2px;`;
+            } else {
+                // その他のマッチ：枠線のみ（塗りなし）
+                div.style.cssText =
+                    `position:absolute;top:${y + 1}px;left:${x}px;` +
+                    `width:${w}px;height:${lh - 2}px;` +
+                    `background:transparent;border:1px solid rgba(255,180,0,0.7);` +
+                    `pointer-events:none;border-radius:2px;box-sizing:border-box;`;
+            }
             frag.appendChild(div);
             charPos += mLine.length + 1; // +1 for '\n'
         });
