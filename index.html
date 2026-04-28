@@ -221,7 +221,7 @@
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             pointer-events: none;
-            z-index: 3;
+            z-index: 4;
             display: none;      /* hidden until toggled */
             overflow: hidden;
         }
@@ -234,8 +234,14 @@
             pointer-events: none; z-index: 2;
         }
 
+        /* Search match highlight overlay */
+        #search-hl {
+            position: absolute; top: 0; left: 0;
+            pointer-events: none; z-index: 3;
+        }
+
         #editor {
-            position: relative; z-index: 4;
+            position: relative; z-index: 5;
             width: 100%; min-height: 100%;
             padding: 10px;
             border: none; outline: none; resize: none;
@@ -372,6 +378,9 @@
 <!-- ── TOOLBAR ────────────────────────────────────────────────────────── -->
 <div class="toolbar">
 
+    <!-- ── ミニマム表示 ───────────────────────────────────────────── -->
+
+    <!-- 新規・開く・保存 -->
     <div class="tgroup">
         <button class="tbtn" onclick="createNewTab()" title="新規タブ (Ctrl+N)">
             <i data-lucide="file-plus"></i>
@@ -380,28 +389,49 @@
             <i data-lucide="folder-open"></i>
         </button>
         <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(event)" multiple>
-        <div class="fname-wrap">
-            <i data-lucide="file-text" style="width:13px;height:13px;color:#888"></i>
-            <input type="text" id="fileNameInput" placeholder="ファイル名..." oninput="updateTabNameFromInput(this.value)">
-        </div>
+        <!-- fileNameInput は非表示で保持（JS参照のため） -->
+        <input type="text" id="fileNameInput" style="display:none">
         <button class="tbtn primary" onclick="saveFile()" title="保存 (Ctrl+S)">
-            <i data-lucide="save"></i> 保存
+            <i data-lucide="save"></i>
         </button>
     </div>
 
     <div class="tsep"></div>
 
+    <!-- エンコード -->
     <div class="tgroup">
-        <button class="tbtn success" onclick="formatExcelFormula()" title="Excel数式を整形">
-            <i data-lucide="list-tree"></i> 数式整形
-        </button>
-        <button class="tbtn" onclick="unformatExcelFormula()" title="整形を解除（1行にまとめる）">
-            <i data-lucide="list"></i> 解除
-        </button>
+        <select id="encoding" onchange="changeEncoding()" style="width:118px">
+            <option value="SJIS">ANSI(Shift_JIS)</option>
+            <option value="UTF16LE">UTF-16 LE</option>
+            <option value="UTF16BE">UTF-16 BE</option>
+            <option value="UTF8" selected>UTF-8</option>
+            <option value="UTF8BOM">UTF-8(BOM付)</option>
+        </select>
     </div>
 
     <div class="tsep"></div>
 
+    <!-- フォント種類・サイズ -->
+    <div class="tgroup">
+        <select id="fontFamily" onchange="updateStyle()" style="width:80px">
+            <option value="'Courier New',Courier,monospace" selected>等幅</option>
+            <option value="Meiryo,sans-serif">メイリオ</option>
+            <option value="'Yu Gothic','游ゴシック',sans-serif">游ゴシック</option>
+            <option value="'MS Mincho','ＭＳ 明朝',serif">MS 明朝</option>
+            <option value="'MS Gothic','ＭＳ ゴシック',monospace">MS ゴシック</option>
+        </select>
+        <select id="fontSize" onchange="updateStyle()" style="width:46px">
+            <option value="12px">12</option>
+            <option value="14px" selected>14</option>
+            <option value="16px">16</option>
+            <option value="18px">18</option>
+            <option value="20px">20</option>
+        </select>
+    </div>
+
+    <div class="tsep"></div>
+
+    <!-- 元に戻す・やり直し -->
     <div class="tgroup">
         <button class="tbtn" id="undoBtn" onclick="undo()" title="元に戻す (Ctrl+Z)">
             <i data-lucide="undo-2"></i>
@@ -413,100 +443,101 @@
 
     <div class="tsep"></div>
 
-    <!-- Search -->
-    <div class="tgroup">
-        <div class="srch-wrap">
-            <i data-lucide="search" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
-            <input type="text" id="searchInput" placeholder="検索..."
-                   oninput="onSearchInput()" onkeydown="onSearchKeydown(event)">
-            <span class="srch-counter" id="srchCounter"></span>
-            <div class="srch-sep"></div>
-            <button class="tbtn" id="caseBtn"  onclick="toggleCase()"
-                    title="大文字/小文字を区別 (Alt+C)"
-                    style="padding:2px 5px;font-weight:bold;font-size:11px">Aa</button>
-            <button class="tbtn" id="regexBtn" onclick="toggleRegex()"
-                    title="正規表現 (Alt+R)"
-                    style="padding:2px 5px;font-size:11px">.*</button>
-            <button class="tbtn" onclick="searchPrev()" title="前へ (Shift+F3)" style="padding:2px 4px">
-                <i data-lucide="chevron-up"></i>
-            </button>
-            <button class="tbtn" onclick="searchNextBtn()" title="次へ (F3)" style="padding:2px 4px">
-                <i data-lucide="chevron-down"></i>
-            </button>
-        </div>
-        <div class="srch-wrap" style="margin-left:4px">
-            <i data-lucide="corner-down-right" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
-            <input type="text" id="replaceInput" placeholder="置換..."
-                   onkeydown="if(event.key==='Enter')replaceCurrent()">
-            <button class="tbtn" onclick="replaceCurrent()" title="置換 (Enter in replace box)" style="padding:2px 4px">
-                <i data-lucide="check"></i>
-            </button>
-            <button class="tbtn" onclick="replaceAll()" title="一括置換" style="padding:2px 4px">
-                <i data-lucide="chevrons-right"></i>
-            </button>
-        </div>
-    </div>
-
-    <div class="tsep"></div>
-
+    <!-- 折り返し -->
     <div class="tgroup">
         <button class="tbtn" id="wrapBtn" onclick="toggleWordWrap()" title="折り返し">
             <i data-lucide="wrap-text"></i>
         </button>
+    </div>
+
+    <div class="tsep"></div>
+
+    <!-- インデントガイド -->
+    <div class="tgroup">
         <button class="tbtn" id="guideBtn" onclick="toggleIndentGuides()" title="インデントガイド (4列毎)">
             <i data-lucide="ruler"></i>
         </button>
     </div>
 
-    <div class="tsep"></div>
+    <!-- ── 拡張表示（display:contents で flex に直接参加） ────────── -->
+    <div id="toolbar-ext" style="display:none">
 
-    <!-- Font / size -->
-    <div class="tgroup">
-        <select id="fontFamily" onchange="updateStyle()">
-            <option value="'Courier New',Courier,monospace" selected>等幅</option>
-            <option value="'MS Gothic','ＭＳ ゴシック',monospace">MS ゴシック</option>
-            <option value="'MS Mincho','ＭＳ 明朝',serif">MS 明朝</option>
-            <option value="Meiryo,sans-serif">メイリオ</option>
-            <option value="'Yu Gothic','游ゴシック',sans-serif">游ゴシック</option>
-        </select>
-        <select id="fontSize" onchange="updateStyle()">
-            <option value="12px">12</option>
-            <option value="14px" selected>14</option>
-            <option value="16px">16</option>
-            <option value="18px">18</option>
-            <option value="20px">20</option>
-        </select>
-    </div>
+        <div class="tsep"></div>
 
-    <div class="tsep"></div>
+        <!-- 表示モード（テーマ） -->
+        <div class="tgroup">
+            <select id="themeSelect" onchange="applyThemeFromSelect()" title="テーマを切り替え" style="width:208px">
+            </select>
+        </div>
 
-    <!-- Theme selector -->
-    <div class="tgroup">
-        <select id="themeSelect" onchange="applyThemeFromSelect()" title="テーマを切り替え">
-        </select>
-    </div>
+        <div class="tsep"></div>
 
-    <div class="tsep"></div>
+        <!-- 検索・置換 -->
+        <div class="tgroup">
+            <div class="srch-wrap">
+                <i data-lucide="search" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
+                <input type="text" id="searchInput" placeholder="検索..."
+                       oninput="onSearchInput()" onkeydown="onSearchKeydown(event)">
+                <button class="tbtn srch-clear-btn" id="srchClearBtn" onclick="clearSearch()"
+                        title="クリア" style="display:none;padding:2px 3px;opacity:.6">×</button>
+                <span class="srch-counter" id="srchCounter"></span>
+                <div class="srch-sep"></div>
+                <button class="tbtn" id="caseBtn"  onclick="toggleCase()"
+                        title="大文字/小文字を区別 (Alt+C)"
+                        style="padding:2px 5px;font-weight:bold;font-size:11px">Aa</button>
+                <button class="tbtn" id="regexBtn" onclick="toggleRegex()"
+                        title="正規表現 (Alt+R)"
+                        style="padding:2px 5px;font-size:11px">.*</button>
+                <button class="tbtn" onclick="searchPrev()" title="前へ (Shift+F3)" style="padding:2px 4px">
+                    <i data-lucide="chevron-up"></i>
+                </button>
+                <button class="tbtn" onclick="searchNextBtn()" title="次へ (F3)" style="padding:2px 4px">
+                    <i data-lucide="chevron-down"></i>
+                </button>
+            </div>
+            <div class="srch-wrap" style="margin-left:4px">
+                <i data-lucide="corner-down-right" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
+                <input type="text" id="replaceInput" placeholder="置換..."
+                       onkeydown="if(event.key==='Enter')replaceCurrent()">
+                <button class="tbtn" onclick="replaceCurrent()" title="置換 (Enter in replace box)" style="padding:2px 4px">
+                    <i data-lucide="check"></i>
+                </button>
+                <button class="tbtn" onclick="replaceAll()" title="一括置換" style="padding:2px 4px">
+                    <i data-lucide="chevrons-right"></i>
+                </button>
+            </div>
+        </div>
 
-    <!-- Encoding -->
-    <div class="tgroup">
-        <select id="encoding" onchange="changeEncoding()">
-            <option value="SJIS">ANSI (Shift_JIS)</option>
-            <option value="UTF16LE">UTF-16 LE</option>
-            <option value="UTF16BE">UTF-16 BE</option>
-            <option value="UTF8" selected>UTF-8</option>
-            <option value="UTF8BOM">UTF-8 (BOM 付き)</option>
-        </select>
-    </div>
+        <div class="tsep"></div>
 
-    <div class="tsep"></div>
+        <!-- 数式整形・解除 -->
+        <div class="tgroup">
+            <button class="tbtn success" onclick="formatExcelFormula()" title="Excel数式を整形">
+                <i data-lucide="list-tree"></i> 数式整形
+            </button>
+            <button class="tbtn" onclick="unformatExcelFormula()" title="整形を解除（1行にまとめる）">
+                <i data-lucide="list"></i> 解除
+            </button>
+        </div>
 
-    <!-- Help -->
-    <div class="tgroup" style="margin-left:auto">
-        <button class="tbtn" onclick="showHelp()" title="ショートカット一覧 (F1)">
-            <i data-lucide="circle-help"></i>
-        </button>
-    </div>
+        <div class="tsep"></div>
+
+        <!-- ヘルプ -->
+        <div class="tgroup">
+            <button class="tbtn" onclick="showHelp()" title="ショートカット一覧 (F1)">
+                <i data-lucide="circle-help"></i>
+            </button>
+        </div>
+
+    </div><!-- /#toolbar-ext -->
+
+    <!-- 拡張トグルボタン（常に右端に表示） -->
+    <button class="tbtn" id="extToggleBtn" onclick="toggleExtMenu()"
+            title="拡張メニューを表示/非表示" style="margin-left:auto">
+        <span id="extIconExpand"><i data-lucide="chevrons-right"></i></span>
+        <span id="extIconCollapse" style="display:none"><i data-lucide="chevrons-left"></i></span>
+    </button>
+
 </div>
 
 <!-- ── TAB BAR ───────────────────────────────────────────────────────── -->
@@ -525,6 +556,8 @@
     <!-- Editor -->
     <div class="editor-wrapper" id="editor-wrapper">
         <div id="line-hl"></div>
+        <!-- Search match highlight overlay -->
+        <div id="search-hl"></div>
         <!-- Indent guides container (lines injected by JS) -->
         <div id="indent-guides"></div>
         <textarea id="editor" spellcheck="false"></textarea>
@@ -605,6 +638,91 @@ const _mc  = document.createElement('canvas');
 const _mct = _mc.getContext('2d');
 
 /* =====================================================================
+   HELPERS
+   ===================================================================== */
+
+/** タブ文字を空白に展開する（canvas計測用） */
+function expandTabs(str) {
+    let result = '', col = 0;
+    for (const ch of str) {
+        if (ch === '\t') { const sp = 4 - (col % 4); result += ' '.repeat(sp); col += sp; }
+        else { result += ch; col++; }
+    }
+    return result;
+}
+
+/**
+ * 非折り返しモード時にエディタ textarea の幅をコンテンツに合わせて広げる。
+ * editor-wrapper の overflow:auto が横スクロールバーを表示する。
+ */
+function syncEditorWidth() {
+    const tab    = getTab(activeTabId);
+    const isWrap = tab && tab.wordWrap;
+    if (isWrap) {
+        editor.style.width = '100%';
+        return;
+    }
+    _mct.font = getComputedStyle(editor).font;
+    const lines = editor.value.split('\n');
+    let maxW = 0;
+    for (const line of lines) {
+        const w = _mct.measureText(expandTabs(line)).width;
+        if (w > maxW) maxW = w;
+    }
+    const wrapperW  = editorWrapper.clientWidth;
+    const contentW  = Math.ceil(maxW) + 30; // 10px left pad + 20px margin
+    editor.style.width = Math.max(wrapperW, contentW) + 'px';
+}
+
+/**
+ * 検索ヒットをオーバーレイで描画する。
+ * 全マッチを薄塗り、現在の選択マッチを濃く塗る。
+ */
+function renderSearchHighlights() {
+    const overlay = document.getElementById('search-hl');
+    if (!overlay) return;
+    overlay.innerHTML = '';
+    const q = document.getElementById('searchInput').value;
+    if (!q || searchMatches.length === 0) return;
+
+    _mct.font = getComputedStyle(editor).font;
+    const lh   = parseFloat(getComputedStyle(editor).lineHeight);
+    const pad  = 10; // editor padding (top / left)
+    const text = editor.value;
+    const frag = document.createDocumentFragment();
+
+    searchMatches.forEach((m, idx) => {
+        const isCurrent = idx === matchIndex;
+        const bg = isCurrent ? 'rgba(255,140,0,0.62)' : 'rgba(255,220,0,0.28)';
+
+        // マッチが複数行にまたがる場合にも対応
+        const matchLines = text.substring(m.start, m.end).split('\n');
+        let charPos = m.start;
+
+        matchLines.forEach(mLine => {
+            const before    = text.substring(0, charPos);
+            const prevLines = before.split('\n');
+            const lineIdx   = prevLines.length - 1;
+            const linePrefix = prevLines[lineIdx];
+
+            const x = pad + _mct.measureText(expandTabs(linePrefix)).width;
+            const y = lineIdx * lh + pad;
+            const w = Math.max(_mct.measureText(expandTabs(mLine)).width, 3);
+
+            const div = document.createElement('div');
+            div.style.cssText =
+                `position:absolute;top:${y}px;left:${x}px;` +
+                `width:${w}px;height:${lh}px;` +
+                `background:${bg};pointer-events:none;border-radius:2px;`;
+            frag.appendChild(div);
+            charPos += mLine.length + 1; // +1 for '\n'
+        });
+    });
+
+    overlay.appendChild(frag);
+}
+
+/* =====================================================================
    THEMES
    ===================================================================== */
 
@@ -615,24 +733,6 @@ const _mct = _mc.getContext('2d');
  */
 const THEMES = {
     /* ── LIGHT ──────────────────────────────────────────────────── */
-    'Default Light': {
-        '--bg':'#f0f2f5','--editor-bg':'#ffffff','--text':'#1a1d23',
-        '--border':'#d1d5db','--accent':'#2563eb','--accent-h':'#1d4ed8',
-        '--caret':'#2563eb','--ln-bg':'#f7f8fa','--ln-fg':'#aaa',
-        '--hl-line':'rgba(37,99,235,0.045)','--indent-guide':'rgba(0,0,0,0.12)',
-        '--toolbar-top':'#f5f7fa','--toolbar-bot':'#e8eaed',
-        '--tab-bar-bg':'#e8eaed','--tab-active-bg':'#ffffff',
-        '--tab-drag-bg':'#dbeafe','--tab-hover':'rgba(0,0,0,.06)',
-        '--tbtn-hover':'rgba(0,0,0,.08)',
-        '--tbtn-active-bg':'#dbeafe','--tbtn-active-border':'#93c5fd',
-        '--input-bg':'#ffffff','--srch-sep':'#ddd','--srch-counter':'#999',
-        '--statusbar-top':'#e8eaed','--statusbar-bot':'#dde0e4','--sb-border':'#ccc',
-        '--modal-bg':'#ffffff','--modal-text':'#555',
-        '--help-h3-color':'#888','--help-border':'#eee',
-        '--sc-key-bg':'#f3f4f6','--sc-key-border':'#d1d5db',
-        '--sc-key-shadow':'#c8ccd1','--sc-key-text':'#374151',
-        '--gutter-legend-bg':'#f9fafb',
-    },
     'GitHub Light': {
         '--bg':'#f6f8fa','--editor-bg':'#ffffff','--text':'#24292f',
         '--border':'#d0d7de','--accent':'#0969da','--accent-h':'#0550ae',
@@ -823,7 +923,6 @@ const THEMES = {
  *     to avoid the OS rendering the option in the theme's own dark color).
  */
 const THEME_META = {
-    'Default Light':  { swatch:'#ffffff', fg:'#1a1d23', desc:'シンプルな白背景（標準）' },
     'GitHub Light':   { swatch:'#ffffff', fg:'#24292f', desc:'GitHub配色の明るいライト' },
     'Solarized Light':{ swatch:'#fdf6e3', fg:'#657b83', desc:'クリーム背景・目に優しい' },
     'One Dark Pro':   { swatch:'#282c34', fg:'#abb2bf', desc:'青みグレー背景・定番ダーク' },
@@ -841,7 +940,8 @@ function applyTheme(name) {
     const t = THEMES[name];
     if (!t) return;
     const root = document.documentElement;
-    Object.keys(THEMES['Default Light']).forEach(k => root.style.removeProperty(k));
+    // Use the first theme's keys as the canonical property list
+    Object.keys(Object.values(THEMES)[0]).forEach(k => root.style.removeProperty(k));
     Object.entries(t).forEach(([k, v]) => root.style.setProperty(k, v));
     try { localStorage.setItem('editorTheme', name); } catch (_) {}
 }
@@ -854,7 +954,7 @@ function applyThemeFromSelect() {
 function initThemeSelect() {
     const sel     = document.getElementById('themeSelect');
     const saved   = (() => { try { return localStorage.getItem('editorTheme'); } catch(_){return null;} })();
-    const current = (saved && THEMES[saved]) ? saved : 'Default Light';
+    const current = (saved && THEMES[saved]) ? saved : 'GitHub Light';
 
     Object.keys(THEME_META).forEach(name => {
         const meta = THEME_META[name];
@@ -979,7 +1079,11 @@ function switchTab(id) {
     updateStatus();
     updateUndoButtons();
     updateGutter();
-    requestAnimationFrame(() => { editorWrapper.scrollTop = tab.scrollTop; });
+    requestAnimationFrame(() => {
+        editorWrapper.scrollTop = tab.scrollTop;
+        syncEditorWidth();
+        renderSearchHighlights();
+    });
 }
 
 function closeTab(id) {
@@ -1068,7 +1172,7 @@ function updateUndoButtons() {
 function buildMatches() {
     const q = document.getElementById('searchInput').value;
     searchMatches = [];
-    if (!q) { matchIndex = -1; refreshCounter(); return; }
+    if (!q) { matchIndex = -1; refreshCounter(); renderSearchHighlights(); return; }
     const text = editor.value;
     try {
         const flags   = 'g' + (caseSensitive ? '' : 'i');
@@ -1099,12 +1203,13 @@ function refreshCounter() {
 }
 
 function jumpToMatch(keepFocus = false) {
-    if (matchIndex < 0 || matchIndex >= searchMatches.length) { refreshCounter(); return; }
+    if (matchIndex < 0 || matchIndex >= searchMatches.length) { refreshCounter(); renderSearchHighlights(); return; }
     const m = searchMatches[matchIndex];
     if (!keepFocus) editor.focus();
     editor.setSelectionRange(m.start, m.end);
     scrollToChar(m.start);
     refreshCounter();
+    renderSearchHighlights();
 }
 
 function scrollToChar(charIdx) {
@@ -1114,7 +1219,18 @@ function scrollToChar(charIdx) {
     editorWrapper.scrollTop = Math.max(0, lineIdx * lh + 10 - editorWrapper.clientHeight / 2);
 }
 
-function onSearchInput()   { buildMatches(); findNearestMatch(); jumpToMatch(true); }
+function onSearchInput() {
+    buildMatches(); findNearestMatch(); jumpToMatch(true);
+    document.getElementById('srchClearBtn').style.display =
+        document.getElementById('searchInput').value ? '' : 'none';
+}
+
+function clearSearch() {
+    const inp = document.getElementById('searchInput');
+    inp.value = '';
+    onSearchInput();
+    inp.focus();
+}
 
 function onSearchKeydown(e) {
     if (e.key === 'Enter')  { e.preventDefault(); e.shiftKey ? searchPrev() : searchNextBtn(); }
@@ -1404,6 +1520,8 @@ function toggleWordWrap() {
     document.getElementById('wrapBtn').classList.toggle('active', tab.wordWrap);
     lastLineCount = 0;
     updateLineNumbers();
+    syncEditorWidth();
+    renderSearchHighlights();
 }
 
 /* ── INDENT GUIDES ────────────────────────────────────────────────────
@@ -1721,6 +1839,14 @@ editor.addEventListener('input', () => {
     scheduleGutterUpdate();
     // Re-render guides when content changes (width may have changed in wrap mode)
     if (guidesVisible) updateIndentGuides();
+    // 非折り返し時は横幅を再同期
+    syncEditorWidth();
+    // 検索ボックスに文字がある場合はマッチ再計算してHL更新
+    if (document.getElementById('searchInput').value) {
+        buildMatches();
+        findNearestMatch();
+        renderSearchHighlights();
+    }
 });
 
 editorWrapper.addEventListener('scroll', () => {
@@ -1786,6 +1912,7 @@ editorWrapper.addEventListener('scroll', () => {
 /* Re-calculate guides when editor wrapper is resized */
 const _guideResizeObserver = new ResizeObserver(() => {
     if (guidesVisible) updateIndentGuides();
+    syncEditorWidth();
 });
 _guideResizeObserver.observe(editorWrapper);
 
@@ -1803,6 +1930,8 @@ function updateStyle() {
         lastLineCount = 0;
         updateLineNumbers(); updateStatus();
         if (guidesVisible) updateIndentGuides();
+        syncEditorWidth();
+        renderSearchHighlights();
     }, 10);
 }
 
@@ -2077,6 +2206,7 @@ window.addEventListener('load', () => {
         lastLineCount = 0;
         updateLineNumbers();
         updateStatus();
+        syncEditorWidth();
     });
 });
 </script>
