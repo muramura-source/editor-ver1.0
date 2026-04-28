@@ -1095,6 +1095,30 @@ function switchTab(id) {
 }
 
 function closeTab(id) {
+    const tab = getTab(id);
+    if (tab && tab.isDirty) {
+        // 未保存の場合は3択ダイアログを表示
+        showDirtyCloseModal(tab.name,
+            () => _doCloseTab(id),          // 閉じる（破棄）
+            async () => {                   // 保存してから閉じる
+                const prev = activeTabId;
+                if (activeTabId !== id) switchTab(id);
+                const saved = await saveFile();
+                if (!saved) {
+                    // キャンセル or エラー → 閉じない。元のタブに戻す
+                    if (activeTabId !== prev && prev && getTab(prev)) switchTab(prev);
+                    return;
+                }
+                if (activeTabId !== prev && prev && getTab(prev)) switchTab(prev);
+                _doCloseTab(id);
+            }
+        );
+        return;
+    }
+    _doCloseTab(id);
+}
+
+function _doCloseTab(id) {
     const idx = tabs.findIndex(t => t.id === id);
     if (tabs.length === 1) {
         const t = tabs[0];
@@ -2055,7 +2079,7 @@ function readFile(file) {
 
 async function saveFile() {
     const tab = getTab(activeTabId);
-    if (!tab) return;
+    if (!tab) return false;
     const text = editor.value;
     const enc  = document.getElementById('encoding').value;
     const name = fileNameInput.value || 'untitled.txt';
@@ -2089,8 +2113,10 @@ async function saveFile() {
             renderTabs(); updateGutter();
             sbInfo.textContent = '保存完了: ' + handle.name;
             setTimeout(() => sbInfo.textContent = '準備完了', 3000);
+            return true;
         } catch (err) {
             if (err.name !== 'AbortError') showAlertModal('エラー', '保存に失敗しました。');
+            return false; // キャンセルまたはエラー
         }
     } else {
         const url = URL.createObjectURL(blob);
@@ -2101,6 +2127,7 @@ async function saveFile() {
         renderTabs(); updateGutter();
         sbInfo.textContent = 'ダウンロード完了';
         setTimeout(() => sbInfo.textContent = '準備完了', 3000);
+        return true;
     }
 }
 
@@ -2120,6 +2147,25 @@ window.addEventListener('drop', async e => {
 /* =====================================================================
    MODALS
    ===================================================================== */
+/**
+ * 未保存タブを閉じる際の3択モーダル
+ * onClose   … 保存せずに閉じる
+ * onSave    … 保存してから閉じる（saveFile() 後に onClose を呼ぶ）
+ */
+function showDirtyCloseModal(tabName, onClose, onSave) {
+    document.getElementById('modal-title').textContent = '未保存の変更があります';
+    document.getElementById('modal-body').textContent  =
+        `「${tabName}」に未保存の変更があります。閉じますか？`;
+    document.getElementById('modal-footer').innerHTML  =
+        `<button class="tbtn" id="dcm-close"  >閉じる</button>
+         <button class="tbtn" id="dcm-cancel" >閉じない</button>
+         <button class="tbtn primary" id="dcm-save">保存する</button>`;
+    document.getElementById('dcm-close') .onclick = () => { closeModal(); onClose(); };
+    document.getElementById('dcm-cancel').onclick = () => closeModal();
+    document.getElementById('dcm-save')  .onclick = () => { closeModal(); onSave(); };
+    document.getElementById('modal-overlay').style.display = 'flex';
+}
+
 function showAlertModal(title, body) {
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-body').textContent  = body;
@@ -2250,6 +2296,15 @@ function closeHelp() {
 /* =====================================================================
    INIT
    ===================================================================== */
+/* ブラウザを閉じる・リロード時に未保存タブがあれば警告 */
+window.addEventListener('beforeunload', e => {
+    const hasDirty = tabs.some(t => t.isDirty);
+    if (hasDirty) {
+        e.preventDefault();
+        e.returnValue = '未保存の変更があります。ページを離れますか？';
+    }
+});
+
 window.addEventListener('load', () => {
     lucide.createIcons();
     initThemeSelect();   // populate dropdown + apply saved/default theme
