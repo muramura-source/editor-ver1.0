@@ -1580,28 +1580,44 @@ function updateIndentGuides() {
    ===================================================================== */
 function _processFormula(formula) {
     // 整形ロジック本体（文字列→文字列）
+    // ・最外層（depth=1）のカンマのみ改行＋インデント
+    // ・ネスト内（depth>=2）のカンマはスペース区切りで1行維持
+    // ・{} 配列もネスト深さとしてカウント
     let result = '', inStr = false, curLen = 0, lastTok = '';
-    const stack = [];
+    const stack = []; // { pos, isLET, argCount, type:'paren'|'brace' }
     const clean = formula.replace(/\s+/g, ' ');
     for (const ch of clean) {
         if (ch === '"') { inStr = !inStr; result += ch; curLen++; continue; }
         if (inStr)      { result += ch; curLen++; continue; }
         if (ch === '(') {
             result += ch; curLen++;
-            stack.push({ pos: curLen, isLET: lastTok.toUpperCase() === 'LET', argCount: 0 });
+            stack.push({ pos: curLen, isLET: lastTok.toUpperCase() === 'LET', argCount: 0, type: 'paren' });
             lastTok = '';
         } else if (ch === ')') {
             stack.pop(); result += ch; curLen++; lastTok = '';
+        } else if (ch === '{') {
+            result += ch; curLen++;
+            stack.push({ pos: curLen, isLET: false, argCount: 0, type: 'brace' });
+            lastTok = '';
+        } else if (ch === '}') {
+            stack.pop(); result += ch; curLen++; lastTok = '';
         } else if (ch === ',') {
             const ctx = stack[stack.length - 1];
-            if (ctx) {
+            if (ctx && stack.length === 1) {
+                // 最外層のみ改行（LETはペア内カンマをスペース区切りで同行に保つ）
                 ctx.argCount++;
-                if (ctx.isLET && ctx.argCount % 2 !== 0) { result += ch + ' '; curLen += 2; }
-                else { result += ch + '\n' + ' '.repeat(ctx.pos); curLen = ctx.pos; }
-            } else { result += ch + '\n'; curLen = 0; }
+                if (ctx.isLET && ctx.argCount % 2 !== 0) {
+                    result += ch + ' '; curLen += 2;
+                } else {
+                    result += ch + '\n' + ' '.repeat(ctx.pos); curLen = ctx.pos;
+                }
+            } else {
+                // ネスト内はカンマ+スペースで1行
+                result += ch + ' '; curLen += 2;
+            }
             lastTok = '';
         } else if (ch === ' ') {
-            if (curLen > 0 && !result.endsWith('\n')) { result += ' '; curLen++; }
+            if (curLen > 0 && !result.endsWith('\n') && !result.endsWith(' ')) { result += ' '; curLen++; }
         } else {
             result += ch; curLen++;
             if (/[A-Za-z0-9_]/.test(ch)) lastTok += ch; else lastTok = '';
