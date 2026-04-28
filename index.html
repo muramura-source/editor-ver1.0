@@ -210,7 +210,8 @@
             text-align: right;
             font-family: 'Courier New', Courier, monospace;
             font-size: 14px; line-height: 1.5;
-            color: var(--ln-fg);
+            color: var(--text);
+            opacity: 0.55;
             user-select: none;
             overflow: hidden; white-space: pre;
             cursor: pointer;
@@ -745,7 +746,7 @@ const THEMES = {
         '--bg':'#f6f8fa','--editor-bg':'#ffffff','--text':'#24292f',
         '--border':'#d0d7de','--accent':'#0969da','--accent-h':'#0550ae',
         '--caret':'#0969da','--ln-bg':'#f6f8fa','--ln-fg':'#8c959f',
-        '--hl-line':'rgba(9,105,218,0.04)','--indent-guide':'rgba(0,0,0,0.10)',
+        '--hl-line':'rgba(9,105,218,0.04)','--indent-guide':'rgba(0,0,0,0.22)',
         '--toolbar-top':'#f6f8fa','--toolbar-bot':'#eaeef2',
         '--tab-bar-bg':'#eaeef2','--tab-active-bg':'#ffffff',
         '--tab-drag-bg':'#ddf4ff','--tab-hover':'rgba(0,0,0,.06)',
@@ -763,7 +764,7 @@ const THEMES = {
         '--bg':'#eee8d5','--editor-bg':'#fdf6e3','--text':'#657b83',
         '--border':'#cdc9b8','--accent':'#268bd2','--accent-h':'#1a6fa3',
         '--caret':'#268bd2','--ln-bg':'#eee8d5','--ln-fg':'#93a1a1',
-        '--hl-line':'rgba(38,139,210,0.06)','--indent-guide':'rgba(0,0,0,0.10)',
+        '--hl-line':'rgba(38,139,210,0.06)','--indent-guide':'rgba(0,0,0,0.20)',
         '--toolbar-top':'#eee8d5','--toolbar-bot':'#e4deca',
         '--tab-bar-bg':'#e4deca','--tab-active-bg':'#fdf6e3',
         '--tab-drag-bg':'#d6eaf8','--tab-hover':'rgba(0,0,0,.05)',
@@ -782,7 +783,7 @@ const THEMES = {
         '--bg':'#21252b','--editor-bg':'#282c34','--text':'#abb2bf',
         '--border':'#3d4148','--accent':'#61afef','--accent-h':'#4d9fdf',
         '--caret':'#61afef','--ln-bg':'#21252b','--ln-fg':'#495162',
-        '--hl-line':'rgba(255,255,255,0.04)','--indent-guide':'rgba(255,255,255,0.10)',
+        '--hl-line':'rgba(255,255,255,0.04)','--indent-guide':'rgba(255,255,255,0.22)',
         '--toolbar-top':'#2c313a','--toolbar-bot':'#21252b',
         '--tab-bar-bg':'#21252b','--tab-active-bg':'#282c34',
         '--tab-drag-bg':'#3a3f4b','--tab-hover':'rgba(255,255,255,.06)',
@@ -800,7 +801,7 @@ const THEMES = {
         '--bg':'#1e1f1c','--editor-bg':'#272822','--text':'#f8f8f2',
         '--border':'#3e3d32','--accent':'#a6e22e','--accent-h':'#8ac520',
         '--caret':'#f8f8f0','--ln-bg':'#1e1f1c','--ln-fg':'#75715e',
-        '--hl-line':'rgba(255,255,255,0.04)','--indent-guide':'rgba(255,255,255,0.09)',
+        '--hl-line':'rgba(255,255,255,0.04)','--indent-guide':'rgba(255,255,255,0.20)',
         '--toolbar-top':'#232420','--toolbar-bot':'#1e1f1c',
         '--tab-bar-bg':'#1e1f1c','--tab-active-bg':'#272822',
         '--tab-drag-bg':'#3e3d32','--tab-hover':'rgba(255,255,255,.06)',
@@ -818,7 +819,7 @@ const THEMES = {
         '--bg':'#21222c','--editor-bg':'#282a36','--text':'#f8f8f2',
         '--border':'#44475a','--accent':'#bd93f9','--accent-h':'#a67de8',
         '--caret':'#f8f8f2','--ln-bg':'#21222c','--ln-fg':'#6272a4',
-        '--hl-line':'rgba(255,255,255,0.05)','--indent-guide':'rgba(255,255,255,0.09)',
+        '--hl-line':'rgba(255,255,255,0.05)','--indent-guide':'rgba(255,255,255,0.20)',
         '--toolbar-top':'#252632','--toolbar-bot':'#21222c',
         '--tab-bar-bg':'#21222c','--tab-active-bg':'#282a36',
         '--tab-drag-bg':'#44475a','--tab-hover':'rgba(255,255,255,.06)',
@@ -836,7 +837,7 @@ const THEMES = {
         '--bg':'#2e3440','--editor-bg':'#2e3440','--text':'#d8dee9',
         '--border':'#434c5e','--accent':'#88c0d0','--accent-h':'#6fb3c5',
         '--caret':'#88c0d0','--ln-bg':'#272c38','--ln-fg':'#4c566a',
-        '--hl-line':'rgba(136,192,208,0.08)','--indent-guide':'rgba(216,222,233,0.10)',
+        '--hl-line':'rgba(136,192,208,0.08)','--indent-guide':'rgba(216,222,233,0.25)',
         '--toolbar-top':'#3b4252','--toolbar-bot':'#2e3440',
         '--tab-bar-bg':'#272c38','--tab-active-bg':'#2e3440',
         '--tab-drag-bg':'#434c5e','--tab-hover':'rgba(255,255,255,.06)',
@@ -854,7 +855,7 @@ const THEMES = {
         '--bg':'#16161e','--editor-bg':'#1a1b2e','--text':'#a9b1d6',
         '--border':'#292e42','--accent':'#7aa2f7','--accent-h':'#6090e8',
         '--caret':'#7aa2f7','--ln-bg':'#16161e','--ln-fg':'#363b54',
-        '--hl-line':'rgba(122,162,247,0.07)','--indent-guide':'rgba(169,177,214,0.10)',
+        '--hl-line':'rgba(122,162,247,0.07)','--indent-guide':'rgba(169,177,214,0.28)',
         '--toolbar-top':'#1a1b2e','--toolbar-bot':'#16161e',
         '--tab-bar-bg':'#16161e','--tab-active-bg':'#1a1b2e',
         '--tab-drag-bg':'#292e42','--tab-hover':'rgba(255,255,255,.06)',
@@ -872,7 +873,7 @@ const THEMES = {
         '--bg':'#011221','--editor-bg':'#011627','--text':'#d6deeb',
         '--border':'#122d42','--accent':'#82aaff','--accent-h':'#6a96f0',
         '--caret':'#82aaff','--ln-bg':'#011221','--ln-fg':'#1d3b53',
-        '--hl-line':'rgba(130,170,255,0.07)','--indent-guide':'rgba(214,222,235,0.09)',
+        '--hl-line':'rgba(130,170,255,0.07)','--indent-guide':'rgba(214,222,235,0.25)',
         '--toolbar-top':'#011c2e','--toolbar-bot':'#011221',
         '--tab-bar-bg':'#011221','--tab-active-bg':'#011627',
         '--tab-drag-bg':'#122d42','--tab-hover':'rgba(255,255,255,.06)',
@@ -890,7 +891,7 @@ const THEMES = {
         '--bg':'#122538','--editor-bg':'#193549','--text':'#ffffff',
         '--border':'#1f4060','--accent':'#ffc600','--accent-h':'#e6b200',
         '--caret':'#ffc600','--ln-bg':'#122538','--ln-fg':'#1f5068',
-        '--hl-line':'rgba(255,198,0,0.07)','--indent-guide':'rgba(255,255,255,0.09)',
+        '--hl-line':'rgba(255,198,0,0.07)','--indent-guide':'rgba(255,255,255,0.22)',
         '--toolbar-top':'#163045','--toolbar-bot':'#122538',
         '--tab-bar-bg':'#122538','--tab-active-bg':'#193549',
         '--tab-drag-bg':'#1f4060','--tab-hover':'rgba(255,255,255,.06)',
@@ -908,7 +909,7 @@ const THEMES = {
         '--bg':'#00212b','--editor-bg':'#002b36','--text':'#839496',
         '--border':'#073642','--accent':'#268bd2','--accent-h':'#1a6fa3',
         '--caret':'#268bd2','--ln-bg':'#00212b','--ln-fg':'#586e75',
-        '--hl-line':'rgba(38,139,210,0.07)','--indent-guide':'rgba(131,148,150,0.12)',
+        '--hl-line':'rgba(38,139,210,0.07)','--indent-guide':'rgba(131,148,150,0.35)',
         '--toolbar-top':'#00252f','--toolbar-bot':'#00212b',
         '--tab-bar-bg':'#00212b','--tab-active-bg':'#002b36',
         '--tab-drag-bg':'#073642','--tab-hover':'rgba(255,255,255,.06)',
@@ -991,7 +992,7 @@ function createNewTab(name = 'untitled.txt', content = '', encoding = 'UTF8', ra
         baselineContent: content,
         history: [{ value: content, ss: 0, se: 0 }],
         histIdx: 0, scrollTop: 0,
-        isDirty: false, wordWrap: false
+        isDirty: false, wordWrap: false, guidesOn: false
     });
     switchTab(id);
 }
@@ -1070,6 +1071,7 @@ function switchTab(id) {
             cur.content   = editor.value;
             cur.scrollTop = editorWrapper.scrollTop;
             cur.encoding  = document.getElementById('encoding').value;
+            cur.guidesOn  = guidesVisible;   // タブごとに保存
         }
     }
     activeTabId = id;
@@ -1080,6 +1082,10 @@ function switchTab(id) {
     document.getElementById('encoding').value = tab.encoding;
     editor.style.whiteSpace = tab.wordWrap ? 'pre-wrap' : 'pre';
     document.getElementById('wrapBtn').classList.toggle('active', !!tab.wordWrap);
+    // インデントガイドのタブ別状態を復元
+    guidesVisible = !!tab.guidesOn;
+    indentGuidesEl.style.display = guidesVisible ? 'block' : 'none';
+    document.getElementById('guideBtn').classList.toggle('active', guidesVisible);
     updateEncodingDisplay(tab.encoding);
     renderTabs();
     lastLineCount = 0;
@@ -1091,6 +1097,7 @@ function switchTab(id) {
         editorWrapper.scrollTop = tab.scrollTop;
         syncEditorWidth();
         renderSearchHighlights();
+        if (guidesVisible) updateIndentGuides();
     });
 }
 
@@ -1583,16 +1590,15 @@ function updateIndentGuides() {
     if (!guidesVisible) return;
 
     _mct.font = getComputedStyle(editor).font;
-    // Width of exactly 4 spaces (1 indent level)
-    const cw4     = _mct.measureText('    ').width;  // 4-space width in px
-    const pad     = 10;                              // editor left padding
+    const cw4     = _mct.measureText('    ').width;
+    const pad     = 10;
     const edW     = editorWrapper.scrollWidth || editorWrapper.clientWidth;
-    const maxCols = Math.ceil((edW - pad) / cw4) + 2; // enough columns + buffer
+    const maxCols = Math.ceil((edW - pad) / cw4) + 2;
 
     let html = '';
     for (let col = 1; col <= maxCols; col++) {
         const x = Math.round(pad + col * cw4);
-        html += `<div style="position:absolute;top:0;bottom:0;left:${x}px;width:1px;background:var(--indent-guide)"></div>`;
+        html += `<div style="position:absolute;top:0;bottom:0;left:${x}px;width:0;border-left:1px dashed var(--indent-guide)"></div>`;
     }
     indentGuidesEl.innerHTML = html;
 }
