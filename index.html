@@ -956,7 +956,10 @@ function applyTheme(name) {
 }
 
 function applyThemeFromSelect() {
-    applyTheme(document.getElementById('themeSelect').value);
+    const name = document.getElementById('themeSelect').value;
+    applyTheme(name);
+    const tab = getTab(activeTabId);
+    if (tab) tab.theme = name;
 }
 
 /** Populate the theme <select> and restore last-used theme */
@@ -992,7 +995,10 @@ function createNewTab(name = 'untitled.txt', content = '', encoding = 'UTF8', ra
         baselineContent: content,
         history: [{ value: content, ss: 0, se: 0 }],
         histIdx: 0, scrollTop: 0,
-        isDirty: false, wordWrap: false, guidesOn: false
+        isDirty: false, wordWrap: false, guidesOn: false,
+        fontFamily: document.getElementById('fontFamily').value,
+        fontSize:   document.getElementById('fontSize').value,
+        theme:      (() => { try { return localStorage.getItem('editorTheme') || 'GitHub Light'; } catch(_){ return 'GitHub Light'; } })()
     });
     switchTab(id);
 }
@@ -1068,10 +1074,13 @@ function switchTab(id) {
     if (activeTabId) {
         const cur = getTab(activeTabId);
         if (cur) {
-            cur.content   = editor.value;
-            cur.scrollTop = editorWrapper.scrollTop;
-            cur.encoding  = document.getElementById('encoding').value;
-            cur.guidesOn  = guidesVisible;   // タブごとに保存
+            cur.content    = editor.value;
+            cur.scrollTop  = editorWrapper.scrollTop;
+            cur.encoding   = document.getElementById('encoding').value;
+            cur.guidesOn   = guidesVisible;
+            cur.fontFamily = document.getElementById('fontFamily').value;
+            cur.fontSize   = document.getElementById('fontSize').value;
+            cur.theme      = document.getElementById('themeSelect').value;
         }
     }
     activeTabId = id;
@@ -1082,6 +1091,17 @@ function switchTab(id) {
     document.getElementById('encoding').value = tab.encoding;
     editor.style.whiteSpace = tab.wordWrap ? 'pre-wrap' : 'pre';
     document.getElementById('wrapBtn').classList.toggle('active', !!tab.wordWrap);
+    // フォント・テーマを復元
+    document.getElementById('fontFamily').value = tab.fontFamily;
+    document.getElementById('fontSize').value   = tab.fontSize;
+    editor.style.fontFamily      = tab.fontFamily;
+    editor.style.fontSize        = tab.fontSize;
+    lineNumbers.style.fontFamily = tab.fontFamily;
+    lineNumbers.style.fontSize   = tab.fontSize;
+    if (tab.theme && THEMES[tab.theme]) {
+        document.getElementById('themeSelect').value = tab.theme;
+        applyTheme(tab.theme);
+    }
     // インデントガイドのタブ別状態を復元
     guidesVisible = !!tab.guidesOn;
     indentGuidesEl.style.display = guidesVisible ? 'block' : 'none';
@@ -2010,6 +2030,8 @@ function updateStyle() {
     editor.style.fontSize        = size;
     lineNumbers.style.fontFamily = fam;
     lineNumbers.style.fontSize   = size;
+    const tab = getTab(activeTabId);
+    if (tab) { tab.fontFamily = fam; tab.fontSize = size; }
     setTimeout(() => {
         lastLineCount = 0;
         updateLineNumbers(); updateStatus();
