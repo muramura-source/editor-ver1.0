@@ -378,9 +378,7 @@
 <!-- ── TOOLBAR ────────────────────────────────────────────────────────── -->
 <div class="toolbar">
 
-    <!-- ── ミニマム表示 ───────────────────────────────────────────── -->
-
-    <!-- 新規・開く・保存 -->
+    <!-- 新規・開く・ファイル名・保存 -->
     <div class="tgroup">
         <button class="tbtn" onclick="createNewTab()" title="新規タブ (Ctrl+N)">
             <i data-lucide="file-plus"></i>
@@ -389,10 +387,12 @@
             <i data-lucide="folder-open"></i>
         </button>
         <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(event)" multiple>
-        <!-- fileNameInput は非表示で保持（JS参照のため） -->
-        <input type="text" id="fileNameInput" style="display:none">
+        <div class="fname-wrap">
+            <i data-lucide="file-text" style="width:13px;height:13px;color:#888"></i>
+            <input type="text" id="fileNameInput" placeholder="ファイル名..." oninput="updateTabNameFromInput(this.value)">
+        </div>
         <button class="tbtn primary" onclick="saveFile()" title="保存 (Ctrl+S)">
-            <i data-lucide="save"></i>
+            <i data-lucide="save"></i> 保存
         </button>
     </div>
 
@@ -400,7 +400,7 @@
 
     <!-- エンコード -->
     <div class="tgroup">
-        <select id="encoding" onchange="changeEncoding()" style="width:118px">
+        <select id="encoding" onchange="changeEncoding()">
             <option value="SJIS">ANSI(Shift_JIS)</option>
             <option value="UTF16LE">UTF-16 LE</option>
             <option value="UTF16BE">UTF-16 BE</option>
@@ -413,32 +413,20 @@
 
     <!-- フォント種類・サイズ -->
     <div class="tgroup">
-        <select id="fontFamily" onchange="updateStyle()" style="width:80px">
+        <select id="fontFamily" onchange="updateStyle()">
             <option value="'Courier New',Courier,monospace" selected>等幅</option>
             <option value="Meiryo,sans-serif">メイリオ</option>
             <option value="'Yu Gothic','游ゴシック',sans-serif">游ゴシック</option>
             <option value="'MS Mincho','ＭＳ 明朝',serif">MS 明朝</option>
             <option value="'MS Gothic','ＭＳ ゴシック',monospace">MS ゴシック</option>
         </select>
-        <select id="fontSize" onchange="updateStyle()" style="width:46px">
+        <select id="fontSize" onchange="updateStyle()">
             <option value="12px">12</option>
             <option value="14px" selected>14</option>
             <option value="16px">16</option>
             <option value="18px">18</option>
             <option value="20px">20</option>
         </select>
-    </div>
-
-    <div class="tsep"></div>
-
-    <!-- 元に戻す・やり直し -->
-    <div class="tgroup">
-        <button class="tbtn" id="undoBtn" onclick="undo()" title="元に戻す (Ctrl+Z)">
-            <i data-lucide="undo-2"></i>
-        </button>
-        <button class="tbtn" id="redoBtn" onclick="redo()" title="やり直し (Ctrl+Y)">
-            <i data-lucide="redo-2"></i>
-        </button>
     </div>
 
     <div class="tsep"></div>
@@ -459,85 +447,84 @@
         </button>
     </div>
 
-    <!-- ── 拡張表示（display:contents で flex に直接参加） ────────── -->
-    <div id="toolbar-ext" style="display:none">
+    <div class="tsep"></div>
 
-        <div class="tsep"></div>
+    <!-- 表示モード（テーマ） -->
+    <div class="tgroup">
+        <select id="themeSelect" onchange="applyThemeFromSelect()" title="テーマを切り替え">
+        </select>
+    </div>
 
-        <!-- 表示モード（テーマ） -->
-        <div class="tgroup">
-            <select id="themeSelect" onchange="applyThemeFromSelect()" title="テーマを切り替え" style="width:208px">
-            </select>
-        </div>
+    <div class="tsep"></div>
 
-        <div class="tsep"></div>
-
-        <!-- 検索・置換 -->
-        <div class="tgroup">
-            <div class="srch-wrap">
-                <i data-lucide="search" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
-                <input type="text" id="searchInput" placeholder="検索..."
-                       oninput="onSearchInput()" onkeydown="onSearchKeydown(event)">
-                <button class="tbtn srch-clear-btn" id="srchClearBtn" onclick="clearSearch()"
-                        title="クリア" style="display:none;padding:2px 3px;opacity:.6">×</button>
-                <span class="srch-counter" id="srchCounter"></span>
-                <div class="srch-sep"></div>
-                <button class="tbtn" id="caseBtn"  onclick="toggleCase()"
-                        title="大文字/小文字を区別 (Alt+C)"
-                        style="padding:2px 5px;font-weight:bold;font-size:11px">Aa</button>
-                <button class="tbtn" id="regexBtn" onclick="toggleRegex()"
-                        title="正規表現 (Alt+R)"
-                        style="padding:2px 5px;font-size:11px">.*</button>
-                <button class="tbtn" onclick="searchPrev()" title="前へ (Shift+F3)" style="padding:2px 4px">
-                    <i data-lucide="chevron-up"></i>
-                </button>
-                <button class="tbtn" onclick="searchNextBtn()" title="次へ (F3)" style="padding:2px 4px">
-                    <i data-lucide="chevron-down"></i>
-                </button>
-            </div>
-            <div class="srch-wrap" style="margin-left:4px">
-                <i data-lucide="corner-down-right" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
-                <input type="text" id="replaceInput" placeholder="置換..."
-                       onkeydown="if(event.key==='Enter')replaceCurrent()">
-                <button class="tbtn" onclick="replaceCurrent()" title="置換 (Enter in replace box)" style="padding:2px 4px">
-                    <i data-lucide="check"></i>
-                </button>
-                <button class="tbtn" onclick="replaceAll()" title="一括置換" style="padding:2px 4px">
-                    <i data-lucide="chevrons-right"></i>
-                </button>
-            </div>
-        </div>
-
-        <div class="tsep"></div>
-
-        <!-- 数式整形・解除 -->
-        <div class="tgroup">
-            <button class="tbtn success" onclick="formatExcelFormula()" title="Excel数式を整形">
-                <i data-lucide="list-tree"></i> 数式整形
+    <!-- 検索・置換 -->
+    <div class="tgroup">
+        <div class="srch-wrap">
+            <i data-lucide="search" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
+            <input type="text" id="searchInput" placeholder="検索..."
+                   oninput="onSearchInput()" onkeydown="onSearchKeydown(event)">
+            <button class="tbtn srch-clear-btn" id="srchClearBtn" onclick="clearSearch()"
+                    title="クリア" style="display:none;padding:2px 3px;opacity:.6">×</button>
+            <span class="srch-counter" id="srchCounter"></span>
+            <div class="srch-sep"></div>
+            <button class="tbtn" id="caseBtn"  onclick="toggleCase()"
+                    title="大文字/小文字を区別 (Alt+C)"
+                    style="padding:2px 5px;font-weight:bold;font-size:11px">Aa</button>
+            <button class="tbtn" id="regexBtn" onclick="toggleRegex()"
+                    title="正規表現 (Alt+R)"
+                    style="padding:2px 5px;font-size:11px">.*</button>
+            <button class="tbtn" onclick="searchPrev()" title="前へ (Shift+F3)" style="padding:2px 4px">
+                <i data-lucide="chevron-up"></i>
             </button>
-            <button class="tbtn" onclick="unformatExcelFormula()" title="整形を解除（1行にまとめる）">
-                <i data-lucide="list"></i> 解除
+            <button class="tbtn" onclick="searchNextBtn()" title="次へ (F3)" style="padding:2px 4px">
+                <i data-lucide="chevron-down"></i>
             </button>
         </div>
-
-        <div class="tsep"></div>
-
-        <!-- ヘルプ -->
-        <div class="tgroup">
-            <button class="tbtn" onclick="showHelp()" title="ショートカット一覧 (F1)">
-                <i data-lucide="circle-help"></i>
+        <div class="srch-wrap" style="margin-left:4px">
+            <i data-lucide="corner-down-right" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
+            <input type="text" id="replaceInput" placeholder="置換..."
+                   onkeydown="if(event.key==='Enter')replaceCurrent()">
+            <button class="tbtn" onclick="replaceCurrent()" title="置換 (Enter in replace box)" style="padding:2px 4px">
+                <i data-lucide="check"></i>
+            </button>
+            <button class="tbtn" onclick="replaceAll()" title="一括置換" style="padding:2px 4px">
+                <i data-lucide="chevrons-right"></i>
             </button>
         </div>
+    </div>
 
-    </div><!-- /#toolbar-ext -->
+    <div class="tsep"></div>
 
-    <!-- 拡張トグルボタン（常に右端に表示） -->
-    <button class="tbtn" id="extToggleBtn" onclick="toggleExtMenu()"
-            title="拡張メニューを表示/非表示" style="margin-left:auto">
-        <span id="extIconExpand"><i data-lucide="chevrons-right"></i></span>
-        <span id="extIconCollapse" style="display:none"><i data-lucide="chevrons-left"></i></span>
-    </button>
+    <!-- 数式整形・解除 -->
+    <div class="tgroup">
+        <button class="tbtn success" onclick="formatExcelFormula()" title="Excel数式を整形">
+            <i data-lucide="list-tree"></i> 数式整形
+        </button>
+        <button class="tbtn" onclick="unformatExcelFormula()" title="整形を解除（1行にまとめる）">
+            <i data-lucide="list"></i> 解除
+        </button>
+    </div>
 
+    <div class="tsep"></div>
+
+    <!-- 元に戻す・やり直し -->
+    <div class="tgroup">
+        <button class="tbtn" id="undoBtn" onclick="undo()" title="元に戻す (Ctrl+Z)">
+            <i data-lucide="undo-2"></i>
+        </button>
+        <button class="tbtn" id="redoBtn" onclick="redo()" title="やり直し (Ctrl+Y)">
+            <i data-lucide="redo-2"></i>
+        </button>
+    </div>
+
+    <div class="tsep"></div>
+
+    <!-- ヘルプ -->
+    <div class="tgroup" style="margin-left:auto">
+        <button class="tbtn" onclick="showHelp()" title="ショートカット一覧 (F1)">
+            <i data-lucide="circle-help"></i>
+        </button>
+    </div>
 </div>
 
 <!-- ── TAB BAR ───────────────────────────────────────────────────────── -->
