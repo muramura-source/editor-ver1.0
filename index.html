@@ -647,7 +647,8 @@ let searchMatches = [];
 let matchIndex    = -1;
 let caseSensitive = false;
 let useRegex      = false;
-let guidesVisible = false;
+let guidesVisible  = false;  // 全タブ共通：インデントガイド表示
+let globalWordWrap = false;  // 全タブ共通：折り返し表示
 let lastLineCount = 0;
 let inputTimer    = null;
 let widthSyncTimer = null;   // syncEditorWidth のデバウンス用（最適化 #6）
@@ -677,8 +678,7 @@ function expandTabs(str) {
  * editor-wrapper の overflow:auto が横スクロールバーを表示する。
  */
 function syncEditorWidth() {
-    const tab    = getTab(activeTabId);
-    const isWrap = tab && tab.wordWrap;
+    const isWrap = globalWordWrap;
     if (isWrap) {
         editor.style.width = '100%';
         return;
@@ -698,20 +698,57 @@ function syncEditorWidth() {
 /**
  * 検索ヒットをオーバーレイで描画する。
  * 全マッチを薄塗り、現在の選択マッチを濃く塗る。
+ *
+ * 差分更新 (#8):
+ *   - マッチ自体が変化した場合 (buildMatches が走った): 全再構築
+ *   - matchIndex のみ変化した場合: 旧/新カレントの div スタイルだけ書き換え
  */
+
+// 差分更新用の状態
+let _hlDivStore       = [];   // _hlDivStore[matchIdx] = [{div, normalCss, currentCss}, ...]
+let _hlCacheKeyRender = '';   // 前回フル描画時の _matchCacheKey
+let _hlLastMatchIndex = -2;   // 前回描画時の matchIndex
+
 function renderSearchHighlights() {
     const overlay = document.getElementById('search-hl');
     if (!overlay) return;
-    overlay.innerHTML = '';
+
     const q = document.getElementById('searchInput').value;
-    if (!q || searchMatches.length === 0) return;
+    if (!q || searchMatches.length === 0) {
+        // マッチなし → 全クリア
+        overlay.innerHTML = '';
+        _hlDivStore = []; _hlCacheKeyRender = ''; _hlLastMatchIndex = -2;
+        return;
+    }
 
     const cs  = getComputedStyle(editor);
     _mct.font = cs.font;
-
-    // lineHeight が "normal" の場合に備えてフォントサイズから計算
     let lh = parseFloat(cs.lineHeight);
     if (!lh || isNaN(lh)) lh = parseFloat(cs.fontSize) * 1.5;
+
+    // ── Fast path: マッチは同じで matchIndex だけ変わった場合 ──────────
+    if (_matchCacheKey === _hlCacheKeyRender &&
+        _hlDivStore.length === searchMatches.length &&
+        matchIndex !== _hlLastMatchIndex) {
+
+        // 前の current を normal スタイルに戻す
+        const prev = _hlLastMatchIndex;
+        if (prev >= 0 && prev < _hlDivStore.length) {
+            _hlDivStore[prev].forEach(info => { info.div.style.cssText = info.normalCss; });
+        }
+        // 新しい current を current スタイルに変える
+        if (matchIndex >= 0 && matchIndex < _hlDivStore.length) {
+            _hlDivStore[matchIndex].forEach(info => { info.div.style.cssText = info.currentCss; });
+        }
+        _hlLastMatchIndex = matchIndex;
+        return;
+    }
+
+    // ── Full rebuild: マッチが変化した場合 ───────────────────────────────
+    overlay.innerHTML = '';
+    _hlDivStore = [];
+    _hlCacheKeyRender = _matchCacheKey;
+    _hlLastMatchIndex = matchIndex;
 
     const pad  = 10; // editor の top/left padding
     const text = editor.value;
@@ -730,6 +767,7 @@ function renderSearchHighlights() {
         const matchText  = text.substring(m.start, m.end);
         const matchLines = matchText.split('\n');
         let charPos = m.start;
+        const divInfos = [];
 
         matchLines.forEach(mLine => {
             // 行インデックスを lineOffsets で正確に求める
@@ -744,24 +782,25 @@ function renderSearchHighlights() {
             const y = lineIdx * lh + pad;
             const w = Math.max(_mct.measureText(expandTabs(mLine)).width, 3);
 
+            // normal / current 両方の cssText を保持しておく（fast path で使い回す）
+            const normalCss =
+                `position:absolute;top:${y + 1}px;left:${x}px;` +
+                `width:${w}px;height:${lh - 2}px;` +
+                `background:transparent;border:1px solid rgba(255,180,0,0.7);` +
+                `pointer-events:none;border-radius:2px;box-sizing:border-box;`;
+            const currentCss =
+                `position:absolute;top:${y}px;left:${x}px;` +
+                `width:${w}px;height:${lh}px;` +
+                `background:rgba(255,140,0,0.55);pointer-events:none;border-radius:2px;`;
+
             const div = document.createElement('div');
-            if (isCurrent) {
-                // 現在のマッチ：しっかり塗り
-                div.style.cssText =
-                    `position:absolute;top:${y}px;left:${x}px;` +
-                    `width:${w}px;height:${lh}px;` +
-                    `background:rgba(255,140,0,0.55);pointer-events:none;border-radius:2px;`;
-            } else {
-                // その他のマッチ：枠線のみ（塗りなし）
-                div.style.cssText =
-                    `position:absolute;top:${y + 1}px;left:${x}px;` +
-                    `width:${w}px;height:${lh - 2}px;` +
-                    `background:transparent;border:1px solid rgba(255,180,0,0.7);` +
-                    `pointer-events:none;border-radius:2px;box-sizing:border-box;`;
-            }
+            div.style.cssText = isCurrent ? currentCss : normalCss;
+            divInfos.push({ div, normalCss, currentCss });
             frag.appendChild(div);
             charPos += mLine.length + 1; // +1 for '\n'
         });
+
+        _hlDivStore.push(divInfos);
     });
 
     overlay.appendChild(frag);
@@ -994,8 +1033,6 @@ function applyTheme(name) {
 function applyThemeFromSelect() {
     const name = document.getElementById('themeSelect').value;
     applyTheme(name);
-    const tab = getTab(activeTabId);
-    if (tab) tab.theme = name;
 }
 
 /** Populate the theme <select> and restore last-used theme */
@@ -1031,10 +1068,7 @@ function createNewTab(name = 'untitled.txt', content = '', encoding = 'UTF8', ra
         baselineContent: content,
         history: [{ value: content, ss: 0, se: 0 }],
         histIdx: 0, scrollTop: 0,
-        isDirty: false, wordWrap: false, guidesOn: false,
-        fontFamily: document.getElementById('fontFamily').value,
-        fontSize:   document.getElementById('fontSize').value,
-        theme:      (() => { try { return localStorage.getItem('editorTheme') || 'GitHub Light'; } catch(_){ return 'GitHub Light'; } })()
+        isDirty: false
     });
     switchTab(id);
 }
@@ -1161,13 +1195,9 @@ function switchTab(id) {
     if (activeTabId) {
         const cur = getTab(activeTabId);
         if (cur) {
-            cur.content    = editor.value;
-            cur.scrollTop  = editorWrapper.scrollTop;
-            cur.encoding   = document.getElementById('encoding').value;
-            cur.guidesOn   = guidesVisible;
-            cur.fontFamily = document.getElementById('fontFamily').value;
-            cur.fontSize   = document.getElementById('fontSize').value;
-            cur.theme      = document.getElementById('themeSelect').value;
+            cur.content   = editor.value;
+            cur.scrollTop = editorWrapper.scrollTop;
+            cur.encoding  = document.getElementById('encoding').value;
         }
     }
     activeTabId = id;
@@ -1176,23 +1206,6 @@ function switchTab(id) {
     editor.value = tab.content;
     fileNameInput.value = tab.name;
     document.getElementById('encoding').value = tab.encoding;
-    editor.style.whiteSpace = tab.wordWrap ? 'pre-wrap' : 'pre';
-    document.getElementById('wrapBtn').classList.toggle('active', !!tab.wordWrap);
-    // フォント・テーマを復元
-    document.getElementById('fontFamily').value = tab.fontFamily;
-    document.getElementById('fontSize').value   = tab.fontSize;
-    editor.style.fontFamily      = tab.fontFamily;
-    editor.style.fontSize        = tab.fontSize;
-    lineNumbers.style.fontFamily = tab.fontFamily;
-    lineNumbers.style.fontSize   = tab.fontSize;
-    if (tab.theme && THEMES[tab.theme]) {
-        document.getElementById('themeSelect').value = tab.theme;
-        applyTheme(tab.theme);
-    }
-    // インデントガイドのタブ別状態を復元
-    guidesVisible = !!tab.guidesOn;
-    indentGuidesEl.style.display = guidesVisible ? 'block' : 'none';
-    document.getElementById('guideBtn').classList.toggle('active', guidesVisible);
     updateEncodingDisplay(tab.encoding);
     renderTabs();
     // アクティブタブが視野外の場合は自動スクロールして見えるようにする
@@ -1600,7 +1613,7 @@ function updateLineNumbers() {
     const text      = editor.value;
     const lineCount = (text.match(/\n/g) || []).length + 1;
     const tab       = getTab(activeTabId);
-    const isWrap    = tab && tab.wordWrap;
+    const isWrap    = globalWordWrap;
 
     // ── 桁数に応じて行番号エリアの幅を自動調整 ──────────────────────
     // 最低2桁分を確保。必要に応じて1桁増えるごとに拡張。
@@ -1695,11 +1708,9 @@ function toggleExtMenu() {
    VIEW TOGGLES
    ===================================================================== */
 function toggleWordWrap() {
-    const tab = getTab(activeTabId);
-    if (!tab) return;
-    tab.wordWrap = !tab.wordWrap;
-    editor.style.whiteSpace = tab.wordWrap ? 'pre-wrap' : 'pre';
-    document.getElementById('wrapBtn').classList.toggle('active', tab.wordWrap);
+    globalWordWrap = !globalWordWrap;
+    editor.style.whiteSpace = globalWordWrap ? 'pre-wrap' : 'pre';
+    document.getElementById('wrapBtn').classList.toggle('active', globalWordWrap);
     lastLineCount = 0;
     updateLineNumbers();
     syncEditorWidth();
@@ -2218,8 +2229,6 @@ function updateStyle() {
     editor.style.fontSize        = size;
     lineNumbers.style.fontFamily = fam;
     lineNumbers.style.fontSize   = size;
-    const tab = getTab(activeTabId);
-    if (tab) { tab.fontFamily = fam; tab.fontSize = size; }
     setTimeout(() => {
         lastLineCount = 0;
         updateLineNumbers(); updateStatus();
