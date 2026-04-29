@@ -176,6 +176,17 @@
         .tab.active { background: var(--tab-active-bg); border-bottom: 2px solid var(--accent); font-weight: 600; }
         .tab.drag-over { background: var(--tab-drag-bg); }
         .tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .tab-name[contenteditable="true"] {
+            outline: none;
+            background: var(--editor-bg);
+            border-radius: 2px;
+            padding: 0 2px;
+            white-space: nowrap;
+            overflow: visible;
+            min-width: 40px;
+            cursor: text;
+            box-shadow: 0 0 0 1.5px var(--accent);
+        }
         .tab-dirty { color: #f59e0b; font-size: 9px; flex-shrink: 0; }
         .tab-close {
             width: 15px; height: 15px; border-radius: 50%;
@@ -1040,12 +1051,63 @@ function renderTabs() {
         div.addEventListener('dragleave', onTabDragLeave);
         div.addEventListener('drop',      onTabDrop);
         div.addEventListener('dragend',   onTabDragEnd);
-        div.onclick = () => switchTab(tab.id);
+        div.onclick = e => {
+            // nameEl が編集中のときはタブ切り替えを抑止
+            if (nameEl.contentEditable === 'true') return;
+            switchTab(tab.id);
+        };
 
         const nameEl  = document.createElement('span');
         nameEl.className = 'tab-name';
         nameEl.textContent = tab.name;
         nameEl.title = tab.name;
+
+        // ── ダブルクリックでインライン編集 (#11) ──────────────────────
+        nameEl.addEventListener('dblclick', e => {
+            e.stopPropagation();
+            // まずこのタブをアクティブにする
+            if (activeTabId !== tab.id) switchTab(tab.id);
+
+            nameEl.contentEditable = 'true';
+            nameEl.focus();
+            // テキストを全選択
+            const range = document.createRange();
+            range.selectNodeContents(nameEl);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+
+            // 編集中はドラッグを無効化
+            div.draggable = false;
+
+            const commit = () => {
+                const newName = nameEl.textContent.trim() || tab.name;
+                nameEl.contentEditable = 'false';
+                div.draggable = true;
+                const t = getTab(tab.id);
+                if (t && newName !== t.name) {
+                    t.name = newName;
+                    fileNameInput.value = newName;
+                    renderTabs();
+                } else {
+                    // 変更なし：表示だけ元に戻す
+                    nameEl.textContent = tab.name;
+                }
+            };
+            const cancel = () => {
+                nameEl.contentEditable = 'false';
+                div.draggable = true;
+                nameEl.textContent = tab.name;
+            };
+
+            nameEl.addEventListener('keydown', ev => {
+                if (ev.key === 'Enter')  { ev.preventDefault(); nameEl.blur(); }
+                if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+                ev.stopPropagation(); // エディタのキーハンドラに流さない
+            }, { once: false, _isRename: true });
+
+            nameEl.addEventListener('blur', commit, { once: true });
+        });
 
         const dirtyEl = document.createElement('span');
         dirtyEl.className = 'tab-dirty';
@@ -2396,6 +2458,7 @@ const SHORTCUTS = [
     {
         cat: 'タブ管理',
         items: [
+            { keys: ['タブ名をダブルクリック'],    desc: 'タブ名をその場で編集（Enter で確定、Escape でキャンセル）' },
             { keys: ['Alt+,'],                    desc: '前のタブへ切り替え' },
             { keys: ['Alt+.'],                    desc: '次のタブへ切り替え' },
             { keys: ['タブをドラッグ'],              desc: 'タブを並び替え（ドラッグ＆ドロップ）' },
