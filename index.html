@@ -650,6 +650,9 @@ let useRegex      = false;
 let guidesVisible  = false;  // 全タブ共通：インデントガイド表示
 let globalWordWrap = false;  // 全タブ共通：折り返し表示
 let lastLineCount = 0;
+// 実際にレンダリングされた行高さ（scrollHeight 実測値）。
+// getComputedStyle の CSS 値と DPI スケールによるサブピクセル丸め誤差を避けるために使用。
+let _measuredLineHeight = 21;
 let inputTimer    = null;
 let widthSyncTimer = null;   // syncEditorWidth のデバウンス用（最適化 #6）
 let gutterTimer   = null;
@@ -747,7 +750,7 @@ function renderSearchHighlights() {
 
     const cs  = getComputedStyle(editor);
     _mct.font = cs.font;
-    let lh = parseFloat(cs.lineHeight);
+    let lh = _measuredLineHeight || parseFloat(cs.lineHeight);
     if (!lh || isNaN(lh)) lh = parseFloat(cs.fontSize) * 1.5;
 
     // ── Fast path: マッチは同じで matchIndex だけ変わった場合 ──────────
@@ -1628,7 +1631,7 @@ function updateGutter() {
     const baseLines = baseline.split(/\r?\n/);
     const curLines  = current.split(/\r?\n/);
     const status    = computeLineStatus(baseLines, curLines);
-    const lh        = parseFloat(getComputedStyle(editor).lineHeight);
+    const lh        = _measuredLineHeight || parseFloat(getComputedStyle(editor).lineHeight);
     const totalH    = curLines.length * lh + 20;
     gutterInner.style.height   = totalH + 'px';
     gutterInner.style.position = 'relative';
@@ -1716,10 +1719,18 @@ function updateLineNumbers() {
             for (let i = 1; i <= lineCount; i++) ln += i + '\n';
             lineNumbers.textContent = ln;
         }
-        const lh     = parseFloat(getComputedStyle(editor).lineHeight);
-        const needed = Math.max(editorWrapper.clientHeight, lineCount * lh + 20);
-        if (Math.abs((parseInt(editor.style.height) || 0) - needed) > 1)
-            editor.style.height = needed + 'px';
+        // ── 実際のレンダリング行高さを scrollHeight で実測する ──────────
+        // getComputedStyle の CSS 値は DPI スケール(125%/150%等)によるサブピクセル
+        // 丸め誤差を含む場合がある（例: 21px CSS → 実描画 20.8px）。
+        // height:auto にして scrollHeight を読むと OS/ブラウザが実際に使った値が得られる。
+        editor.style.height = 'auto';           // 一時的に解除して自然高さを得る
+        const _sh = editor.scrollHeight;        // 実測値（forced reflow）
+        // _sh = paddingTop(10) + lineCount × 実行高さ + paddingBottom(10)
+        _measuredLineHeight = lineCount > 0
+            ? (_sh - 20) / lineCount
+            : (parseFloat(getComputedStyle(editor).lineHeight) || 21);
+        const needed = Math.max(editorWrapper.clientHeight, _sh);
+        editor.style.height = needed + 'px';
     }
     syncOverlaySize();
 }
@@ -1754,7 +1765,7 @@ function updateStatus() {
     const eolEl = document.getElementById('sb-eol');
     eolEl.textContent = text.includes('\r\n') ? 'CRLF' : text.includes('\r') ? 'CR' : 'LF';
 
-    const lh = parseFloat(getComputedStyle(editor).lineHeight);
+    const lh = _measuredLineHeight || parseFloat(getComputedStyle(editor).lineHeight);
     lineHl.style.top    = ((lineNum - 1) * lh + 10) + 'px';
     lineHl.style.height = lh + 'px';
 }
@@ -2274,7 +2285,7 @@ editorWrapper.addEventListener('scroll', () => {
     let dragAnchorLine = -1; // ドラッグ開始時の論理行インデックス
 
     function lineIndexAt(offsetY) {
-        const lh = parseFloat(getComputedStyle(editor).lineHeight);
+        const lh = _measuredLineHeight || parseFloat(getComputedStyle(editor).lineHeight);
         return Math.max(0, Math.floor((offsetY + lineNumbers.scrollTop - 10) / lh));
     }
 
