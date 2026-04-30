@@ -408,7 +408,7 @@
         <button class="tbtn" onclick="document.getElementById('fileInput').click()" title="ファイルを開く">
             <i data-lucide="folder-open"></i>
         </button>
-        <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(event)" multiple>
+        <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(event)" multiple accept=".txt,.csv,.tsv,.html,.htm,.css,.js,.mjs,.json,.jsonc,.md,.markdown,.xml,.yaml,.yml,.ini,.conf,.log,.sql,.py,.rb,.go,.rs,.ts,.tsx,.jsx,.vue,.svelte,.php,.sh,.bat,.ps1,.c,.cpp,.h,.hpp,.cs,.java,.kt,.swift,text/*">
         <!-- fileNameInput は非表示で保持（JS参照のため） -->
         <input type="text" id="fileNameInput" style="display:none">
         <button class="tbtn primary" onclick="saveFile()" title="保存 (Ctrl+S)">
@@ -433,14 +433,14 @@
 
     <!-- フォント種類・サイズ -->
     <div class="tgroup">
-        <select id="fontFamily" onchange="updateStyle()" style="width:80px">
+        <select id="fontFamily" title="フォント種類（全タブ共通）" onchange="updateStyle()" style="width:80px">
             <option value="'Courier New',Courier,monospace" selected>等幅</option>
             <option value="Meiryo,sans-serif">メイリオ</option>
             <option value="'Yu Gothic','游ゴシック',sans-serif">游ゴシック</option>
             <option value="'MS Mincho','ＭＳ 明朝',serif">MS 明朝</option>
             <option value="'MS Gothic','ＭＳ ゴシック',monospace">MS ゴシック</option>
         </select>
-        <select id="fontSize" onchange="updateStyle()" style="width:46px">
+        <select id="fontSize" title="フォントサイズ（全タブ共通）" onchange="updateStyle()" style="width:46px">
             <option value="12px">12</option>
             <option value="14px" selected>14</option>
             <option value="16px">16</option>
@@ -658,7 +658,7 @@ let draggedTabId  = null;
 // 折り返しモード用の行数計測キャンバス（1度だけ生成して使い回す）
 const _mc  = document.createElement('canvas');
 const _mct = _mc.getContext('2d');
-
+/* 最長行幅キャッシュ（syncEditorWidth 用） */ let _maxLineCache = { width: 0, valid: false }; function invalidateWidthCache() { _maxLineCache.valid = false; } /* getComputedStyle のフォント文字列キャッシュ */ let _editorFontCache = ""; let _lnFontCache = ""; function invalidateFontCache() { _editorFontCache = ""; _lnFontCache = ""; }
 /* =====================================================================
    HELPERS
    ===================================================================== */
@@ -678,20 +678,20 @@ function expandTabs(str) {
  * editor-wrapper の overflow:auto が横スクロールバーを表示する。
  */
 function syncEditorWidth() {
-    const isWrap = globalWordWrap;
-    if (isWrap) {
-        editor.style.width = '100%';
-        return;
-    }
+    if (globalWordWrap) { editor.style.width = '100%'; return; }
     _mct.font = getComputedStyle(editor).font;
-    const lines = editor.value.split('\n');
-    let maxW = 0;
-    for (const line of lines) {
-        const w = _mct.measureText(expandTabs(line)).width;
-        if (w > maxW) maxW = w;
+    // キャッシュ無効時のみ全行スキャン（タブ切替・読込・テーマ変更・フォント変更時など）
+    if (!_maxLineCache.valid) {
+        const lines = editor.value.split('\n');
+        let maxW = 0;
+        for (const line of lines) {
+            const w = _mct.measureText(expandTabs(line)).width;
+            if (w > maxW) maxW = w;
+        }
+        _maxLineCache = { width: maxW, valid: true };
     }
-    const wrapperW  = editorWrapper.clientWidth;
-    const contentW  = Math.ceil(maxW) + 30; // 10px left pad + 20px margin
+    const wrapperW = editorWrapper.clientWidth;
+    const contentW = Math.ceil(_maxLineCache.width) + 30; // 10px left pad + 20px margin
     editor.style.width = Math.max(wrapperW, contentW) + 'px';
 }
 
@@ -699,7 +699,7 @@ function syncEditorWidth() {
  * 検索ヒットをオーバーレイで描画する。
  * 全マッチを薄塗り、現在の選択マッチを濃く塗る。
  *
- * 差分更新 (#8):
+ * 差分更新:
  *   - マッチ自体が変化した場合 (buildMatches が走った): 全再構築
  *   - matchIndex のみ変化した場合: 旧/新カレントの div スタイルだけ書き換え
  */
@@ -759,7 +759,7 @@ function renderSearchHighlights() {
     for (let i = 0; i < text.length; i++) {
         if (text[i] === '\n') lineOffsets.push(i + 1);
     }
-
+    let _lineIdxCursor = 0; // 前進検索用ポインタ。searchMatches は start 昇順なので前に戻らない
     searchMatches.forEach((m, idx) => {
         const isCurrent = idx === matchIndex;
 
@@ -772,9 +772,9 @@ function renderSearchHighlights() {
         matchLines.forEach(mLine => {
             // 行インデックスを lineOffsets で正確に求める
             let lineIdx = 0;
-            for (let i = lineOffsets.length - 1; i >= 0; i--) {
-                if (lineOffsets[i] <= charPos) { lineIdx = i; break; }
-            }
+            while (_lineIdxCursor + 1 < lineOffsets.length && lineOffsets[_lineIdxCursor + 1] <= charPos) _lineIdxCursor++;
+            while (_lineIdxCursor > 0 && lineOffsets[_lineIdxCursor] > charPos) _lineIdxCursor--; // 安全策（通常は不要）
+            lineIdx = _lineIdxCursor;
             const lineStart  = lineOffsets[lineIdx];
             const linePrefix = text.substring(lineStart, charPos);
 
@@ -1019,13 +1019,15 @@ const THEME_META = {
     'Solarized Dark': { swatch:'#002b36', fg:'#839496', desc:'ティール背景・科学的設計の配色' },
 };
 
+        // THEMES の全キー一覧を初期化時に1度だけ計算してキャッシュ
+const THEME_KEYS = Object.freeze(Object.keys(Object.values(THEMES)[0] || {}));
 /** Apply a named theme by setting CSS custom properties on <html> */
 function applyTheme(name) {
     const t = THEMES[name];
     if (!t) return;
     const root = document.documentElement;
     // Use the first theme's keys as the canonical property list
-    Object.keys(Object.values(THEMES)[0]).forEach(k => root.style.removeProperty(k));
+    THEME_KEYS.forEach(k => root.style.removeProperty(k));
     Object.entries(t).forEach(([k, v]) => root.style.setProperty(k, v));
     try { localStorage.setItem('editorTheme', name); } catch (_) {}
 }
@@ -1046,8 +1048,8 @@ function initThemeSelect() {
         const opt  = document.createElement('option');
         opt.value    = name;
         opt.selected = name === current;
-        // Always use the theme's own fg/swatch colors so text is readable
-        // regardless of the OS or browser dark-mode.
+        // OS のダーク/ライトモードに依存せず常に読みやすい配色を保つため、
+        // option 要素には fg/swatch を明示的に設定する
         opt.style.backgroundColor = meta.swatch;
         opt.style.color           = meta.fg;
         // Label: swatch square + name + description
@@ -1072,7 +1074,7 @@ function createNewTab(name = 'untitled.txt', content = '', encoding = 'UTF8', ra
     });
     switchTab(id);
 }
-
+function openOrReplaceTab(name, content, encoding, raw) {  const t = getTab(activeTabId);  const isEmptyActive = t && !t.isDirty && t.content === "" && t.baselineContent === "" && (t.rawData == null);  if (isEmptyActive) {    t.name = name; t.content = content; t.baselineContent = content;    t.encoding = encoding; t.rawData = raw;    t.history = [{ value: content, ss: 0, se: 0 }]; t.histIdx = 0;    t.isDirty = false; t.scrollTop = 0;    editor.value = content;    fileNameInput.value = name;    document.getElementById("encoding").value = encoding;    updateEncodingDisplay(encoding);    renderTabs(); updateLineNumbers(); updateStatus();    scheduleGutterUpdate(); syncEditorWidth();  } else {    createNewTab(name, content, encoding, raw);  }}
 function renderTabs() {
     tabBar.innerHTML = '';
     tabs.forEach(tab => {
@@ -1096,7 +1098,7 @@ function renderTabs() {
         nameEl.textContent = tab.name;
         nameEl.title = tab.name;
 
-        // ── ダブルクリックでインライン編集 (#11) ──────────────────────
+        // ── ダブルクリックでインライン編集 ──────────────────────────
         nameEl.addEventListener('dblclick', e => {
             e.stopPropagation();
             // まずこのタブをアクティブにする
@@ -1161,7 +1163,7 @@ function renderTabs() {
     });
 }
 
-/* Tab drag-and-drop reorder */
+/* タブのドラッグ＆ドロップで並び替え */
 function onTabDragStart(e) {
     draggedTabId = e.currentTarget.dataset.tabId;
     e.dataTransfer.effectAllowed = 'move';
@@ -1220,12 +1222,12 @@ function switchTab(id) {
     updateGutter();
     requestAnimationFrame(() => {
         editorWrapper.scrollTop = tab.scrollTop;
-        syncEditorWidth();
+        invalidateWidthCache(); syncEditorWidth();
         renderSearchHighlights();
         if (guidesVisible) updateIndentGuides();
     });
 }
-
+const _closedTabStack = []; const MAX_CLOSED_TABS = 10; // 閉じたタブの履歴（Ctrl+Shift+T で復元）
 function closeTab(id) {
     const tab = getTab(id);
     if (tab && tab.isDirty) {
@@ -1249,9 +1251,9 @@ function closeTab(id) {
     }
     _doCloseTab(id);
 }
-
+function restoreLastClosedTab() { if (_closedTabStack.length === 0) { sbInfo.textContent = '復元できる閉じたタブはありません'; return; } const t = _closedTabStack.pop(); openOrReplaceTab(t.name, t.content, t.encoding, null); sbInfo.textContent = `復元: ${t.name}`; }
 function _doCloseTab(id) {
-    const idx = tabs.findIndex(t => t.id === id);
+    const idx = tabs.findIndex(t => t.id === id); const _closingTab = tabs[idx]; if (_closingTab && _closingTab.content) { _closedTabStack.push({ name: _closingTab.name, content: _closingTab.content, encoding: _closingTab.encoding }); if (_closedTabStack.length > MAX_CLOSED_TABS) _closedTabStack.shift(); }
     if (tabs.length === 1) {
         const t = tabs[0];
         t.content = ''; t.name = 'untitled.txt';
@@ -1333,6 +1335,11 @@ function updateUndoButtons() {
 /* =====================================================================
    SEARCH
    ===================================================================== */
+// 文字列の軽量ハッシュ（DJB2系）。検索キャッシュキーで全文を保持しないために使う
+function _hashStr(s) {
+    let h = 0; for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
+    return h;
+}
 // buildMatches のキャッシュキー：テキスト・クエリ・オプションが前回と同じなら再計算不要
 let _matchCacheKey = '';
 
@@ -1345,7 +1352,7 @@ function buildMatches() {
         _matchCacheKey = '';
         refreshCounter(); renderSearchHighlights(); return;
     }
-    const key = `${q}\0${caseSensitive}\0${useRegex}\0${text}`;
+    const key = `${q}\0${caseSensitive}\0${useRegex}\0${text.length}\0${_hashStr(text)}`;
     if (key === _matchCacheKey) return;   // 変化なし → 再計算スキップ
     _matchCacheKey = key;
     searchMatches  = [];
@@ -1471,12 +1478,18 @@ function replaceAll() {
     buildMatches();
     if (searchMatches.length === 0) return;
     const count = searchMatches.length;
-    let text = editor.value;
-    for (let i = searchMatches.length - 1; i >= 0; i--) {
-        const m = searchMatches[i];
-        text = text.substring(0, m.start) + rep + text.substring(m.end);
+    let newText;
+    try {
+        const flags   = 'g' + (caseSensitive ? '' : 'i');
+        const pattern = useRegex ? q : q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // 正規表現モードでは rep の $1, $& を有効化。リテラルモードでは $ をエスケープ
+        const safeRep = useRegex ? rep : rep.replace(/\$/g, '$$$$');
+        newText = editor.value.replace(new RegExp(pattern, flags), safeRep);
+    } catch (_) {
+        showAlertModal('エラー', '正規表現が不正です。');
+        return;
     }
-    editor.value = text;
+    editor.value = newText;
     markDirty(); saveToHistory();
     buildMatches(); matchIndex = -1; refreshCounter();
     updateLineNumbers(); updateStatus(); scheduleGutterUpdate();
@@ -1486,7 +1499,7 @@ function replaceAll() {
 /* =====================================================================
    CHANGE GUTTER  (per-line modified/added indicator)
    ===================================================================== */
-// Map によるカウント方式で O(n) に改善（最適化 #7）
+// Map によるカウント方式で O(n) に抑えた類似度スコア
 function simScore(a, b) {
     if (a === b) return 1;
     const ta = a.trim(), tb = b.trim();
@@ -1545,11 +1558,11 @@ function scheduleGutterUpdate() {
 function updateGutter() {
     const tab = getTab(activeTabId);
     if (!tab) { gutterInner.innerHTML = ''; return; }
-    const baseline = tab.baselineContent ?? '';   // null/undefined → ''
+    const baseline = tab.baselineContent ?? '';
     const current  = editor.value;
-    // FIX: was `if (!baseline || ...)` — empty string '' is falsy,
-    // so a file opened as empty would never show gutter marks.
-    // Now we only skip when content is truly identical.
+    // baseline と完全一致するときのみガターマークの計算をスキップ
+
+
     if (baseline === current) {
         gutterInner.innerHTML = '';
         gutterInner.style.height = '0';
@@ -1593,7 +1606,7 @@ function getVisualRowCount(line, availWidth) {
 }
 
 function renderWrappedLineNumbers(logicalLines) {
-    _mct.font   = getComputedStyle(editor).font;
+    if (!_editorFontCache) _editorFontCache = getComputedStyle(editor).font; _mct.font = _editorFontCache;
     const avail = Math.max(1, editorWrapper.clientWidth - 20);
     let ln = '';
     for (let i = 0; i < logicalLines.length; i++) {
@@ -1615,20 +1628,20 @@ function updateLineNumbers() {
     const tab       = getTab(activeTabId);
     const isWrap    = globalWordWrap;
 
-    // ── 桁数に応じて行番号エリアの幅を自動調整 ──────────────────────
-    // 最低2桁分を確保。必要に応じて1桁増えるごとに拡張。
-    // 1桁=約9px(等幅14px)、余白(右4px+左余裕4px)=8px、最低2桁=26px+8=34px
+    // 桁数に応じて行番号エリアの幅を自動調整（最低2桁分確保）
+
+
     const digits   = String(lineCount).length;
     const minDigits = Math.max(2, digits);
-    // 文字幅はcanvasで実測（フォント変更時も正確）
-    _mct.font = getComputedStyle(lineNumbers).font;
+    // 文字幅は canvas で実測（フォント変更時も正確）
+    if (!_lnFontCache) _lnFontCache = getComputedStyle(lineNumbers).font; _mct.font = _lnFontCache;
     const charW  = _mct.measureText('0').width;
     const newW   = Math.ceil(minDigits * charW) + 12; // 12px = 左右余白合計
     if (parseInt(lineNumbers.style.width) !== newW) {
         lineNumbers.style.width    = newW + 'px';
         lineNumbers.style.minWidth = newW + 'px';
     }
-    // ────────────────────────────────────────────────────────────────
+
 
     if (isWrap) {
         renderWrappedLineNumbers(text.split('\n'));
@@ -1659,7 +1672,7 @@ function updateStatus() {
     const se     = editor.selectionEnd;
     const before = text.substring(0, ss);
 
-    // split を1回ずつ使い、正規表現の繰り返し実行を廃止（最適化 #5）
+    // split を1回ずつ使い、行数・現在行・選択行を1パスで算出する
     const beforeLines = before.split('\n');
     const lineNum = beforeLines.length;
     const col     = beforeLines[beforeLines.length - 1].length + 1;
@@ -1690,7 +1703,7 @@ function cycleLineEnding() {
     let text   = editor.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     if (cur === 'LF') text = text.replace(/\n/g, '\r\n');
     editor.value = text;
-    markDirty(); saveToHistory(); updateLineNumbers(); updateStatus();
+    _matchCacheKey = ''; markDirty(); saveToHistory(); updateLineNumbers(); updateStatus(); renderSearchHighlights();
 }
 
 /* =====================================================================
@@ -1710,10 +1723,10 @@ function toggleExtMenu() {
 function toggleWordWrap() {
     globalWordWrap = !globalWordWrap;
     editor.style.whiteSpace = globalWordWrap ? 'pre-wrap' : 'pre';
-    document.getElementById('wrapBtn').classList.toggle('active', globalWordWrap);
+    document.getElementById('wrapBtn').classList.toggle('active', globalWordWrap); try { localStorage.setItem("editor:wordWrap", globalWordWrap ? "1" : "0"); } catch(_){}
     lastLineCount = 0;
     updateLineNumbers();
-    syncEditorWidth();
+    invalidateWidthCache(); syncEditorWidth();
     renderSearchHighlights();
 }
 
@@ -1725,11 +1738,11 @@ function toggleWordWrap() {
 function toggleIndentGuides() {
     guidesVisible = !guidesVisible;
     document.getElementById('guideBtn').classList.toggle('active', guidesVisible);
-    indentGuidesEl.style.display = guidesVisible ? 'block' : 'none';
+    indentGuidesEl.style.display = guidesVisible ? 'block' : 'none'; try { localStorage.setItem("editor:indentGuides", guidesVisible ? "1" : "0"); } catch(_){}
     if (guidesVisible) updateIndentGuides();
 }
 
-let _lastGuideWidth = 0;   // 幅変化なければ再描画をスキップ（最適化 #9）
+let _lastGuideWidth = 0;   // 幅変化なければ再描画をスキップ
 
 function updateIndentGuides() {
     if (!guidesVisible) return;
@@ -1854,6 +1867,8 @@ function unformatExcelFormula() {
     scheduleGutterUpdate();
 }
 
+// 行先頭のインデント1段（タブ or 1〜4個の半角空白）を削除し、{line, removed} を返す
+function _outdentLine(l) { const m = l.match(/^(\t| {1,4})/); return m ? { line: l.slice(m[0].length), removed: m[0].length } : { line: l, removed: 0 }; }
 /* =====================================================================
    EDITOR KEYBOARD HANDLING
    ===================================================================== */
@@ -1862,7 +1877,7 @@ editor.addEventListener('keydown', e => {
     const end   = editor.selectionEnd;
     const text  = editor.value;
 
-    /* Tab / Shift+Tab */
+    /* Tab / Shift+Tab：インデント／アウトデント */
     if (e.key === 'Tab') {
         e.preventDefault();
         if (start === end) {
@@ -1872,13 +1887,13 @@ editor.addEventListener('keydown', e => {
                 const lineEnd   = text.indexOf('\n', start);
                 const lineEndPos = lineEnd === -1 ? text.length : lineEnd;
                 const line      = text.substring(lineStart, lineEndPos);
-                let newLine, removed;
-                if (line.startsWith('\t'))   { newLine = line.slice(1); removed = 1; }
-                else if (line.startsWith('    ')) { newLine = line.slice(4); removed = 4; }
-                else if (line.startsWith('   '))  { newLine = line.slice(3); removed = 3; }
-                else if (line.startsWith('  '))   { newLine = line.slice(2); removed = 2; }
-                else if (line.startsWith(' '))    { newLine = line.slice(1); removed = 1; }
-                else { newLine = line; removed = 0; }
+                const _r = _outdentLine(line);
+                const newLine = _r.line, removed = _r.removed;
+
+
+
+
+
                 if (removed > 0) {
                     editor.setRangeText(newLine, lineStart, lineEndPos, 'preserve');
                     editor.setSelectionRange(Math.max(lineStart, start - removed), Math.max(lineStart, start - removed));
@@ -1894,12 +1909,12 @@ editor.addEventListener('keydown', e => {
             let newBlock;
             if (e.shiftKey) {
                 newBlock = lines.map(l => {
-                    if (l.startsWith('\t'))   return l.slice(1);
-                    if (l.startsWith('    ')) return l.slice(4);
-                    if (l.startsWith('   '))  return l.slice(3);
-                    if (l.startsWith('  '))   return l.slice(2);
-                    if (l.startsWith(' '))    return l.slice(1);
-                    return l;
+                    return _outdentLine(l).line;
+
+
+
+
+
                 }).join('\n');
             } else {
                 newBlock = lines.map(l => '\t' + l).join('\n');
@@ -1911,7 +1926,7 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Home: smart jump */
+    /* Home：スマートジャンプ */
     if (e.key === 'Home' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         const lineStart   = text.lastIndexOf('\n', start - 1) + 1;
@@ -1920,7 +1935,7 @@ editor.addEventListener('keydown', e => {
         const smartPos    = firstNS === -1 ? lineStart : lineStart + firstNS;
         const newPos      = start === smartPos ? lineStart : smartPos;
         if (e.shiftKey) {
-            // selectionDirection を見てアンカー端を正しく決定する (#3)
+            // selectionDirection を見てアンカー端を正しく決定する
             // 'backward': カーソルは selectionStart 側、アンカーは selectionEnd 側
             // 'forward' / 'none': カーソルは selectionEnd 側、アンカーは selectionStart 側
             const dir    = editor.selectionDirection;
@@ -1937,35 +1952,40 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Alt+↑/↓: move line */
+    /* Alt+↑/↓：行移動（複数行選択にも対応） */
     if (e.altKey && !e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
-        const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-        const lineEnd   = text.indexOf('\n', start);
-        if (e.key === 'ArrowUp' && lineStart > 0) {
-            const prevNL    = text.lastIndexOf('\n', lineStart - 2);
+        // 選択範囲を含む「行ブロック」の境界を求める
+        const blockStart = text.lastIndexOf('\n', start - 1) + 1;
+        // end が改行直後（行頭）にある場合はその行を含めない
+        const effEnd     = (end > start && text[end - 1] === '\n') ? end - 1 : end;
+        let blockEnd     = text.indexOf('\n', effEnd);
+        if (blockEnd === -1) blockEnd = text.length;
+        const block      = text.substring(blockStart, blockEnd);
+
+        if (e.key === 'ArrowUp' && blockStart > 0) {
+            const prevNL    = text.lastIndexOf('\n', blockStart - 2);
             const prevStart = prevNL + 1;
-            const curLine   = lineEnd === -1 ? text.substring(lineStart) : text.substring(lineStart, lineEnd);
-            const prevLine  = text.substring(prevStart, lineStart - 1);
-            const tail      = lineEnd === -1 ? '' : text.substring(lineEnd);
-            editor.value    = text.substring(0, prevStart) + curLine + '\n' + prevLine + tail;
-            const np        = prevStart + (start - lineStart);
-            editor.setSelectionRange(np, np);
-        } else if (e.key === 'ArrowDown' && lineEnd !== -1) {
-            const nextEnd  = text.indexOf('\n', lineEnd + 1);
-            const curLine  = text.substring(lineStart, lineEnd);
-            const nextLine = nextEnd === -1 ? text.substring(lineEnd + 1) : text.substring(lineEnd + 1, nextEnd);
-            const tail     = nextEnd === -1 ? '' : text.substring(nextEnd);
-            editor.value   = text.substring(0, lineStart) + nextLine + '\n' + curLine + tail;
-            const np       = lineStart + nextLine.length + 1 + (start - lineStart);
-            editor.setSelectionRange(np, np);
+            const prevLine  = text.substring(prevStart, blockStart - 1);
+            const tail      = text.substring(blockEnd);
+            editor.value    = text.substring(0, prevStart) + block + '\n' + prevLine + tail;
+            const shift     = -(prevLine.length + 1);
+            editor.setSelectionRange(start + shift, end + shift);
+        } else if (e.key === 'ArrowDown' && blockEnd < text.length) {
+            const nextEnd  = text.indexOf('\n', blockEnd + 1);
+            const hasMore  = nextEnd !== -1;
+            const nextLine = hasMore ? text.substring(blockEnd + 1, nextEnd) : text.substring(blockEnd + 1);
+            const tail     = hasMore ? text.substring(nextEnd) : '';
+            editor.value   = text.substring(0, blockStart) + nextLine + '\n' + block + tail;
+            const shift    = nextLine.length + 1;
+            editor.setSelectionRange(start + shift, end + shift);
         }
         markDirty(); saveToHistory(); lastLineCount = 0; updateLineNumbers(); updateStatus();
         scheduleGutterUpdate();
         return;
     }
 
-    /* Auto bracket completion */
+    /* 括弧の自動補完 */
     if (AUTO_PAIR[e.key]) {
         e.preventDefault();
         const closing = AUTO_PAIR[e.key];
@@ -1981,15 +2001,15 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Skip over closing bracket */
-    if (CLOSING_CHARS.has(e.key) && start === end && text[start] === e.key) {
+    /* 閉じ括弧スキップ */
+    if (CLOSING_CHARS.has(e.key) && !isComposing && start === end && text[start] === e.key) {
         e.preventDefault();
         editor.setSelectionRange(start + 1, start + 1);
         updateStatus();
         return;
     }
 
-    /* Backspace: delete matching pair */
+    /* Backspace：対応する括弧ペアを削除 */
     if (e.key === 'Backspace' && start === end && start > 0) {
         const prev = text[start - 1], next = text[start];
         if (AUTO_PAIR[prev] === next) {
@@ -2000,7 +2020,7 @@ editor.addEventListener('keydown', e => {
         }
     }
 
-    /* Enter: preserve / smart indent */
+    /* Enter：自動インデント／スマートインデント */
     if (e.key === 'Enter') {
         const lineStart   = text.lastIndexOf('\n', start - 1) + 1;
         const lineContent = text.substring(lineStart, start);
@@ -2020,7 +2040,7 @@ editor.addEventListener('keydown', e => {
 
         const lineHasContent = lineContent.trim().length > 0;
 
-        // インデントのみの行で Enter → 現在行の空白を除去して改行のみ挿入（VS Code 準拠 #4）
+        // インデントのみの行で Enter → 現在行の空白を除去して改行のみ挿入（VS Code 準拠）
         if (indent && !lineHasContent) {
             e.preventDefault();
             // lineStart〜start の空白をすべて取り除き、改行だけ挿入
@@ -2044,16 +2064,16 @@ window.addEventListener('keydown', e => {
     const ctrl = e.ctrlKey || e.metaKey;
     if (e.key === 'F1')  { e.preventDefault(); showHelp(); return; }
     if (e.key === 'F3')  { e.preventDefault(); e.shiftKey ? searchPrev() : searchNextBtn(); return; }
-    if (ctrl) {
+    if (ctrl) { const _t = e.target; if (_t && (_t.tagName === 'INPUT' || _t.tagName === 'TEXTAREA') && _t !== editor) { /* 検索/置換ボックス等での Ctrl+Z/Y はブラウザ標準（INPUT 内の Undo）に任せる */ return; }
         // Alt+, / Alt+. : タブ切り替え
         // ※ Ctrl+Tab / Ctrl+PageUp/Down はChrome がブラウザタブ切り替えに使うため
         //   Alt+カンマ（前）/ Alt+ピリオド（次）を採用（Chrome で非干渉）
-        switch (e.key.toLowerCase()) {
+        if (e.key === "Tab") { e.preventDefault(); if (tabs.length >= 2) { const idx = tabs.findIndex(t => t.id === activeTabId); const next = e.shiftKey ? (idx - 1 + tabs.length) % tabs.length : (idx + 1) % tabs.length; switchTab(tabs[next].id); } return; } switch (e.key.toLowerCase()) {
             case 's': e.preventDefault(); saveFile();     return;
             case 'z': e.preventDefault(); e.shiftKey ? redo() : undo(); return;
             case 'y': e.preventDefault(); redo();         return;
             case 'n': e.preventDefault(); createNewTab(); return;
-            case 'w': e.preventDefault(); closeTab(activeTabId); return;
+            case 'w': e.preventDefault(); closeTab(activeTabId); return; // Ctrl+W (ブラウザ依存)
             case 'f': e.preventDefault(); {
                 // 拡張メニューが閉じていれば自動展開してから検索ボックスにフォーカス
                 const ext = document.getElementById('toolbar-ext');
@@ -2066,7 +2086,7 @@ window.addEventListener('keydown', e => {
                 });
                 return;
             }
-            case 'd': e.preventDefault(); duplicateLine(); return;
+            case 'd': e.preventDefault(); if (!isComposing) duplicateLine(); return; case 't': if (e.shiftKey) { e.preventDefault(); restoreLastClosedTab(); return; } break;
         }
     }
     if (e.altKey && !ctrl) {
@@ -2108,7 +2128,7 @@ let isComposing = false;
 editor.addEventListener('compositionstart', () => { isComposing = true; });
 editor.addEventListener('compositionend',   () => {
     isComposing = false;
-    _matchCacheKey = '';   // テキスト変更でマッチキャッシュを無効化 (#2)
+    _matchCacheKey = '';   // テキスト変更でマッチキャッシュを無効化
     // IME確定時に一度だけ処理を走らせる
     markDirty();
     updateLineNumbers();
@@ -2119,7 +2139,7 @@ editor.addEventListener('compositionend',   () => {
     inputTimer = setTimeout(saveToHistory, 600);
     scheduleGutterUpdate();
     if (guidesVisible) updateIndentGuides();
-    syncEditorWidth();
+    invalidateWidthCache(); syncEditorWidth();
     if (document.getElementById('searchInput').value) {
         buildMatches();
         findNearestMatch();
@@ -2130,7 +2150,7 @@ editor.addEventListener('compositionend',   () => {
 editor.addEventListener('input', () => {
     // IME変換中は処理をスキップ（compositionend で一括処理する）
     if (isComposing) return;
-    _matchCacheKey = '';   // テキスト変更でマッチキャッシュを無効化 (#2)
+    _matchCacheKey = '';   // テキスト変更でマッチキャッシュを無効化
     markDirty();
     updateLineNumbers();
     updateStatus();
@@ -2139,11 +2159,11 @@ editor.addEventListener('input', () => {
     clearTimeout(inputTimer);
     inputTimer = setTimeout(saveToHistory, 600);
     scheduleGutterUpdate();
-    // Re-render guides when content changes (width may have changed in wrap mode)
+    // テキスト変更時はインデントガイドを再描画（折り返し時に幅が変化するため）
     if (guidesVisible) updateIndentGuides();
-    // 非折り返し時は横幅を再同期（デバウンスで高頻度入力時の負荷を軽減 最適化 #6）
+    // 非折り返し時は横幅を再同期（高頻度入力時の負荷軽減のためデバウンス）
     clearTimeout(widthSyncTimer);
-    widthSyncTimer = setTimeout(syncEditorWidth, 150);
+    widthSyncTimer = setTimeout(() => { invalidateWidthCache(); syncEditorWidth(); }, 150);
     // 検索ボックスに文字がある場合はマッチ再計算してHL更新
     if (document.getElementById('searchInput').value) {
         buildMatches();
@@ -2159,10 +2179,10 @@ editorWrapper.addEventListener('scroll', () => {
 
 ['click', 'keyup', 'focus', 'mouseup'].forEach(ev => editor.addEventListener(ev, updateStatus));
 
-/* Line number area: click = select line, drag = select multiple lines */
+/* 行番号エリア：クリックで行選択、ドラッグで複数行選択 */
 (function () {
     let dragging    = false;
-    let dragAnchorLine = -1; // logical line index at drag start
+    let dragAnchorLine = -1; // ドラッグ開始時の論理行インデックス
 
     function lineIndexAt(offsetY) {
         const lh = parseFloat(getComputedStyle(editor).lineHeight);
@@ -2170,14 +2190,14 @@ editorWrapper.addEventListener('scroll', () => {
     }
 
     function lineRange(lines, li) {
-        // Returns {start, end} character positions for logical line li
+        // 論理行 li の {start, end} 文字位置を返す
         let pos = 0;
         for (let i = 0; i < li; i++) pos += lines[i].length + 1;
         return { start: pos, end: pos + lines[li].length };
     }
 
     lineNumbers.addEventListener('mousedown', e => {
-        e.preventDefault(); // prevent text selection in line-number column itself
+        e.preventDefault(); // 行番号領域自体のテキスト選択を防ぐ
         const lines = editor.value.split('\n');
         const li    = lineIndexAt(e.offsetY);
         if (li >= lines.length) return;
@@ -2194,7 +2214,7 @@ editorWrapper.addEventListener('scroll', () => {
     window.addEventListener('mousemove', e => {
         if (!dragging) return;
         const lines = editor.value.split('\n');
-        // Translate window-level mouse position to lineNumbers-local offsetY
+        // ウィンドウ座標から lineNumbers ローカルの offsetY に変換
         const rect   = lineNumbers.getBoundingClientRect();
         const localY = e.clientY - rect.top;
         const li     = Math.min(Math.max(0, lineIndexAt(localY)), lines.length - 1);
@@ -2202,7 +2222,7 @@ editorWrapper.addEventListener('scroll', () => {
         const anchorRange  = lineRange(lines, dragAnchorLine);
         const currentRange = lineRange(lines, li);
 
-        // Select from anchor to current, always covering full lines
+        // アンカー〜現在位置を行単位で完全選択
         const selStart = Math.min(anchorRange.start, currentRange.start);
         const selEnd   = Math.max(anchorRange.end,   currentRange.end);
         editor.setSelectionRange(selStart, selEnd);
@@ -2212,7 +2232,7 @@ editorWrapper.addEventListener('scroll', () => {
     window.addEventListener('mouseup', () => { dragging = false; });
 })();
 
-/* Re-calculate guides when editor wrapper is resized */
+/* エディタラッパーがリサイズされたらガイドを再計算 */
 const _guideResizeObserver = new ResizeObserver(() => {
     if (guidesVisible) updateIndentGuides();
     syncEditorWidth();
@@ -2226,14 +2246,14 @@ function updateStyle() {
     const fam  = document.getElementById('fontFamily').value;
     const size = document.getElementById('fontSize').value;
     editor.style.fontFamily      = fam;
-    editor.style.fontSize        = size;
+    editor.style.fontSize        = size; try { localStorage.setItem("editor:fontFamily", fam); localStorage.setItem("editor:fontSize", size); invalidateFontCache(); } catch(_){}
     lineNumbers.style.fontFamily = fam;
     lineNumbers.style.fontSize   = size;
     setTimeout(() => {
         lastLineCount = 0;
         updateLineNumbers(); updateStatus();
         if (guidesVisible) updateIndentGuides();
-        syncEditorWidth();
+        invalidateWidthCache(); syncEditorWidth();
         renderSearchHighlights();
     }, 10);
 }
@@ -2295,7 +2315,7 @@ function readFile(file) {
             const ua      = Encoding.convert(raw, { to: 'UNICODE', from: fromEnc });
             let text      = Encoding.codeToString(ua);
             if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-            createNewTab(file.name, text, target, raw);
+            openOrReplaceTab(file.name, text, target, raw);
             resolve();
         };
         reader.readAsArrayBuffer(file);
@@ -2341,7 +2361,7 @@ async function saveFile() {
             return true;
         } catch (err) {
             if (err.name !== 'AbortError') showAlertModal('エラー', '保存に失敗しました。');
-            return false; // キャンセルまたはエラー
+            return false; // キャンセル or エラー
         }
     } else {
         const url = URL.createObjectURL(blob);
@@ -2410,8 +2430,8 @@ function showConfirmModal(title, body, onConfirm) {
     document.getElementById('modal-overlay').style.display = 'flex';
 }
 
-function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
-
+function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; } /* Escape でモーダル/ヘルプを閉じる */ document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const mo = document.getElementById('modal-overlay'); const ho = document.getElementById('help-overlay'); if (ho && getComputedStyle(ho).display !== 'none') { e.preventDefault(); e.stopPropagation(); closeHelp(); return; } if (mo && getComputedStyle(mo).display !== 'none') { e.preventDefault(); e.stopPropagation(); closeModal(); return; } }, true);
+/* セッション復元（前回のタブを localStorage に保存／復元） */ const SESSION_KEY = 'editor:session'; const SESSION_ACTIVE_KEY = 'editor:sessionActive'; const SESSION_MAX_TAB = 1024 * 1024; const SESSION_MAX_TOTAL = 4 * 1024 * 1024; function saveSessionSnapshot() { if (!tabs || tabs.length === 0) return; const onlyEmpty = tabs.every(t => !t.isDirty && t.content === '' && t.baselineContent === '' && t.rawData == null); if (onlyEmpty) { try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_ACTIVE_KEY); } catch(_){} return; } const snap = []; let total = 0; for (const t of tabs) { if (t.rawData) continue; if (typeof t.content !== 'string') continue; const sz = t.content.length * 2; if (sz > SESSION_MAX_TAB) continue; if (total + sz > SESSION_MAX_TOTAL) break; total += sz; const h = (t.history && t.history[t.histIdx]) || { ss: 0, se: 0 }; snap.push({ id: t.id, name: t.name, content: t.content, baseline: t.baselineContent, encoding: t.encoding, isDirty: t.isDirty, scrollTop: t.scrollTop || 0, ss: h.ss || 0, se: h.se || 0 }); } if (snap.length === 0) { try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_ACTIVE_KEY); } catch(_){} return; } try { localStorage.setItem(SESSION_KEY, JSON.stringify({ savedAt: Date.now(), tabs: snap })); localStorage.setItem(SESSION_ACTIVE_KEY, String(activeTabId)); } catch(_){} } function tryRestoreSession() { let raw; try { raw = localStorage.getItem(SESSION_KEY); } catch(_) { return false; } if (!raw) return false; let parsed; try { parsed = JSON.parse(raw); } catch(_) { try { localStorage.removeItem(SESSION_KEY); } catch(_){} return false; } if (!parsed || !Array.isArray(parsed.tabs) || parsed.tabs.length === 0) return false; const meaningful = parsed.tabs.some(t => t.isDirty || (t.content && t.content.length > 0)); if (!meaningful) { try { localStorage.removeItem(SESSION_KEY); } catch(_){} return false; } const dt = new Date(parsed.savedAt || 0); const dtStr = isNaN(dt.getTime()) ? '前回' : (dt.getFullYear() + '/' + String(dt.getMonth()+1).padStart(2,'0') + '/' + String(dt.getDate()).padStart(2,'0') + ' ' + String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0')); const dirtyCount = parsed.tabs.filter(t => t.isDirty).length; const msg = dtStr + ' に保存された ' + parsed.tabs.length + ' 個のタブ' + (dirtyCount > 0 ? '（うち未保存 ' + dirtyCount + ' 個）' : '') + ' を復元しますか？'; showConfirmModalChoice('セッションを復元', msg, () => { restoreFromSnapshot(parsed); closeModal(); }, () => { try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_ACTIVE_KEY); } catch(_){} createNewTab(); closeModal(); }); return true; } function restoreFromSnapshot(parsed) { let savedActive = null; try { savedActive = localStorage.getItem(SESSION_ACTIVE_KEY); } catch(_){} for (const s of parsed.tabs) { createNewTab(s.name || '無題', s.content || '', s.encoding || 'UTF8', null); const t = tabs[tabs.length - 1]; if (t) { if (typeof s.baseline === 'string') t.baselineContent = s.baseline; t.isDirty = !!s.isDirty; t.scrollTop = s.scrollTop || 0; if (t.history && t.history[0]) { t.history[0].ss = s.ss || 0; t.history[0].se = s.se || 0; } } } if (savedActive) { const target = tabs.find(t => String(t.id) === String(savedActive)); if (target) switchTab(target.id); } renderTabs(); updateLineNumbers(); updateStatus(); scheduleGutterUpdate(); invalidateWidthCache(); syncEditorWidth(); if (sbInfo) sbInfo.textContent = '前回のセッションを復元しました'; } function showConfirmModalChoice(title, body, onYes, onNo) { document.getElementById('modal-title').textContent = title; document.getElementById('modal-body').textContent = body; document.getElementById('modal-footer').innerHTML = '<button class="tbtn" id="conf-no-btn">破棄</button><button class="tbtn primary" id="conf-yes-btn">復元</button>'; document.getElementById('conf-yes-btn').onclick = onYes; document.getElementById('conf-no-btn').onclick = onNo; document.getElementById('modal-overlay').style.display = 'flex'; }
 /* =====================================================================
    HELP PANEL
    ===================================================================== */
@@ -2421,24 +2441,24 @@ const SHORTCUTS = [
         items: [
             { keys: ['Ctrl+S'],                   desc: '保存' },
             { keys: ['Ctrl+N'],                   desc: '新規タブを開く' },
-            { keys: ['Ctrl+W', '× ボタン'],        desc: 'タブを閉じる（最後の1枚はリセット）' },
-        ]
-    },
+            { keys: ['Ctrl+W', 'Ctrl+Shift+W'],   desc: 'タブを閉じる（最後の1枚はリセット／Ctrl+W はブラウザ依存）' },
+            { keys: ['Ctrl+Shift+T'],             desc: '直前に閉じたタブを復元（最大10件）' },
+            { keys: ['ファイルをD&D'],              desc: 'アクティブタブが空ならそこへ読み込み（それ以外は新規タブ）' } ]    },
     {
         cat: '編集操作',
         items: [
-            { keys: ['Ctrl+Z'],                   desc: '元に戻す' },
+            { keys: ['Ctrl+Z'],                   desc: '元に戻す（IME確定単位／検索ボックス内ではINPUTのUndo）' },
             { keys: ['Ctrl+Y', 'Ctrl+Shift+Z'],   desc: 'やり直し' },
             { keys: ['Ctrl+D'],                   desc: '現在行を直下に複製' },
-            { keys: ['Tab'],                      desc: 'インデント（複数行選択時は一括）' },
-            { keys: ['Shift+Tab'],                desc: 'アウトデント（一括も可）' },
-            { keys: ['Alt+↑', 'Alt+↓'],           desc: '現在行を上下に移動' },
-            { keys: ['Home'],                     desc: '行頭スマートジャンプ（非空白 ↔ 真の行頭）' },
-            { keys: ['( [ {'],                    desc: '括弧を自動補完・選択範囲を括弧で囲む' },
+            { keys: ['Tab'],                      desc: 'インデント挿入／複数行選択時はまとめてインデント' }, 
+            { keys: ['Shift+Tab'],                desc: 'アウトデント（タブ／最大4スペース／複数行可）' },
+            { keys: ['Alt+↑', 'Alt+↓'],           desc: '行を上下に移動（複数行選択にも対応）' },
+            { keys: ['Home'],                     desc: '行頭スマートジャンプ（非空白先頭 ↔ 真の行頭）' },
+            { keys: ['Shift+Home', 'Shift+End'],  desc: '選択範囲を行頭/行末まで拡張（選択方向を維持）' },
+            { keys: ['( [ {'],                    desc: '括弧を自動補完／選択範囲を括弧で囲む' },
             { keys: ['Backspace'],                desc: '対応する括弧ペアを一括削除' },
-            { keys: ['Enter'],                    desc: '自動インデント維持（括弧内は内側に展開）' },
-        ]
-    },
+            { keys: ['Enter'],                    desc: '自動インデント維持（括弧内は内側へ展開／空白のみの行ではクリア）' }
+        ]    },
     {
         cat: '検索・置換',
         items: [
@@ -2468,18 +2488,18 @@ const SHORTCUTS = [
         cat: 'タブ管理',
         items: [
             { keys: ['タブ名をダブルクリック'],    desc: 'タブ名をその場で編集（Enter で確定、Escape でキャンセル）' },
-            { keys: ['Alt+,'],                    desc: '前のタブへ切り替え' },
-            { keys: ['Alt+.'],                    desc: '次のタブへ切り替え' },
+            { keys: ['Alt+,', 'Ctrl+Shift+Tab'],  desc: '前のタブへ切り替え（Ctrl+Tab はブラウザ依存）' },
+            { keys: ['Alt+.', 'Ctrl+Tab'],        desc: '次のタブへ切り替え（Ctrl+Tab はブラウザ依存）' },
             { keys: ['タブをドラッグ'],              desc: 'タブを並び替え（ドラッグ＆ドロップ）' },
-            { keys: ['ファイルをD&D'],              desc: 'エディターにドロップしてファイルを開く' },
+            { keys: ['× ボタン'],                  desc: 'タブを閉じる（未保存時は確認モーダル）' },
+            { keys: ['アクティブタブ自動表示'],      desc: '切替時にタブバーが自動スクロールして可視化' }
         ]
     },
     {
-        cat: 'その他',
-        items: [
-            { keys: ['F1'],                       desc: 'このショートカット一覧を表示' },
-        ]
-    }
+        cat: '設定・データ保存',
+        items: [ { keys: ['フォント／サイズ'], desc: '全タブ共通で適用、リロード後も保持' }, { keys: ['テーマ'], desc: '11種から選択、リロード後も保持' }, { keys: ['折り返し／インデントガイド'], desc: 'ON/OFF を保存し次回起動時も復元' }, { keys: ['前回セッション'], desc: 'ブラウザを閉じた時のタブ群を起動時に復元（確認あり）' } ]
+    },
+    { cat: 'ヘルプ・情報', items: [ { keys: ['F1'], desc: 'このショートカット一覧を表示' }, { keys: ['Escape'], desc: 'モーダル／ヘルプを閉じる' } ] }
 ];
 
 function showHelp() {
@@ -2524,19 +2544,19 @@ function closeHelp() {
 /* =====================================================================
    INIT
    ===================================================================== */
-/* ブラウザを閉じる・リロード時に未保存タブがあれば警告 */
+/* ブラウザを閉じる・リロード時の処理：未保存警告 + セッション保存 */
 window.addEventListener('beforeunload', e => {
+    /* セッションスナップショットを保存（次回起動時に復元可能） */
+    try { saveSessionSnapshot(); } catch(_) {}
     const hasDirty = tabs.some(t => t.isDirty);
     if (hasDirty) {
         e.preventDefault();
         e.returnValue = '未保存の変更があります。ページを離れますか？';
     }
-});
-
-window.addEventListener('load', () => {
+}); window.addEventListener('load', () => {
     lucide.createIcons();
-    initThemeSelect();   // populate dropdown + apply saved/default theme
-    createNewTab();
+    initThemeSelect();   // ドロップダウン初期化＋保存済みテーマを適用
+    if (!tryRestoreSession()) createNewTab();
 
     // 拡張メニューの前回状態を復元
     try {
@@ -2546,7 +2566,7 @@ window.addEventListener('load', () => {
             document.getElementById('extIconExpand').style.display   = 'none';
             document.getElementById('extIconCollapse').style.display = '';
         }
-    } catch (_) {}
+    } catch (_) {} try { /* B-7 設定復元 */ const ff = localStorage.getItem("editor:fontFamily"); const fs = localStorage.getItem("editor:fontSize"); const ww = localStorage.getItem("editor:wordWrap"); const ig = localStorage.getItem("editor:indentGuides"); if (ff) { const sel = document.getElementById("fontFamily"); for (const o of sel.options) if (o.value === ff) { sel.value = ff; break; } } if (fs) { const sel = document.getElementById("fontSize"); for (const o of sel.options) if (o.value === fs) { sel.value = fs; break; } } if (ww === "1") { globalWordWrap = true; editor.style.whiteSpace = "pre-wrap"; document.getElementById("wrapBtn").classList.add("active"); } if (ig === "1") { guidesVisible = true; document.getElementById("guideBtn").classList.add("active"); indentGuidesEl.style.display = "block"; } } catch(_) {}
 
     requestAnimationFrame(() => {
         updateStyle();
