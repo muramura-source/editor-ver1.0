@@ -658,7 +658,7 @@ let draggedTabId  = null;
 // 折り返しモード用の行数計測キャンバス（1度だけ生成して使い回す）
 const _mc  = document.createElement('canvas');
 const _mct = _mc.getContext('2d');
-/* 最長行幅キャッシュ（syncEditorWidth 用） */ let _maxLineCache = { width: 0, valid: false }; function invalidateWidthCache() { _maxLineCache.valid = false; } /* getComputedStyle のフォント文字列キャッシュ */ let _editorFontCache = ""; let _lnFontCache = ""; function invalidateFontCache() { _editorFontCache = ""; _lnFontCache = ""; }
+/* 最長行幅キャッシュ（syncEditorWidth 用） */ let _maxLineCache = { width: 0, valid: false }; function invalidateWidthCache() { _maxLineCache.valid = false; } /* getComputedStyle のフォント文字列キャッシュ */ let _editorFontCache = ""; let _lnFontCache = ""; function invalidateFontCache() { _editorFontCache = ""; _lnFontCache = ""; } /* オーバーレイ(line-hl/search-hl/indent-guides)のサイズをeditorの実コンテンツに同期 */ let _lastOverlayW = 0, _lastOverlayH = 0; function syncOverlaySize() { const w = editor.offsetWidth; const h = editor.offsetHeight; if (w === _lastOverlayW && h === _lastOverlayH) return; _lastOverlayW = w; _lastOverlayH = h; const sh = document.getElementById("search-hl"); const ig = document.getElementById("indent-guides"); if (sh) { sh.style.width = w + "px"; sh.style.height = h + "px"; } if (ig) { ig.style.width = w + "px"; ig.style.height = h + "px"; } if (lineHl) { lineHl.style.width = w + "px"; } _lastGuideWidth = 0; }
 /* =====================================================================
    HELPERS
    ===================================================================== */
@@ -692,7 +692,7 @@ function syncEditorWidth() {
     }
     const wrapperW = editorWrapper.clientWidth;
     const contentW = Math.ceil(_maxLineCache.width) + 30; // 10px left pad + 20px margin
-    editor.style.width = Math.max(wrapperW, contentW) + 'px';
+    editor.style.width = Math.max(wrapperW, contentW) + 'px'; syncOverlaySize();
 }
 
 /**
@@ -1647,7 +1647,7 @@ function updateLineNumbers() {
         renderWrappedLineNumbers(text.split('\n'));
         const saved = editorWrapper.scrollTop;
         editor.style.height = 'auto';
-        editor.style.height = Math.max(editorWrapper.clientHeight, editor.scrollHeight) + 'px';
+        editor.style.height = Math.max(editorWrapper.clientHeight, editor.scrollHeight) + 'px'; syncOverlaySize();
         editorWrapper.scrollTop = saved;
     } else {
         if (lineCount !== lastLineCount) {
@@ -1660,7 +1660,7 @@ function updateLineNumbers() {
         const needed = Math.max(editorWrapper.clientHeight, lineCount * lh + 20);
         if (Math.abs((parseInt(editor.style.height) || 0) - needed) > 1)
             editor.style.height = needed + 'px';
-    }
+    } syncOverlaySize();
 }
 
 /* =====================================================================
@@ -1742,7 +1742,7 @@ function toggleIndentGuides() {
     if (guidesVisible) updateIndentGuides();
 }
 
-let _lastGuideWidth = 0;   // 幅変化なければ再描画をスキップ
+let _lastGuideWidth = 0, _lastGuideHeight = 0;   // 幅・高さ変化なければ再描画をスキップ
 
 function updateIndentGuides() {
     if (!guidesVisible) return;
@@ -1750,11 +1750,11 @@ function updateIndentGuides() {
     _mct.font = getComputedStyle(editor).font;
     const cw4     = _mct.measureText('    ').width;
     const pad     = 10;
-    const edW     = editorWrapper.scrollWidth || editorWrapper.clientWidth;
+    const edW     = editor.offsetWidth || editorWrapper.clientWidth;
 
-    // 幅が前回と同じなら再描画不要
-    if (edW === _lastGuideWidth) return;
-    _lastGuideWidth = edW;
+    // 幅・高さが前回と同じなら再描画不要
+    const edH = editor.offsetHeight || editorWrapper.clientHeight;
+    if (edW === _lastGuideWidth && edH === _lastGuideHeight) return; _lastGuideWidth = edW; _lastGuideHeight = edH;
 
     const maxCols = Math.ceil((edW - pad) / cw4) + 2;
 
