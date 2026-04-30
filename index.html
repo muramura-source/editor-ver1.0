@@ -658,7 +658,30 @@ let draggedTabId  = null;
 // 折り返しモード用の行数計測キャンバス（1度だけ生成して使い回す）
 const _mc  = document.createElement('canvas');
 const _mct = _mc.getContext('2d');
-/* 最長行幅キャッシュ（syncEditorWidth 用） */ let _maxLineCache = { width: 0, valid: false }; function invalidateWidthCache() { _maxLineCache.valid = false; } /* getComputedStyle のフォント文字列キャッシュ */ let _editorFontCache = ""; let _lnFontCache = ""; function invalidateFontCache() { _editorFontCache = ""; _lnFontCache = ""; } /* オーバーレイ(line-hl/search-hl/indent-guides)のサイズをeditorの実コンテンツに同期 */ let _lastOverlayW = 0, _lastOverlayH = 0; function syncOverlaySize() { const w = editor.offsetWidth; const h = editor.offsetHeight; if (w === _lastOverlayW && h === _lastOverlayH) return; _lastOverlayW = w; _lastOverlayH = h; const sh = document.getElementById("search-hl"); const ig = document.getElementById("indent-guides"); if (sh) { sh.style.width = w + "px"; sh.style.height = h + "px"; } if (ig) { ig.style.width = w + "px"; ig.style.height = h + "px"; } if (lineHl) { lineHl.style.width = w + "px"; } _lastGuideWidth = 0; }
+/* 最長行幅キャッシュ（syncEditorWidth 用） */
+let _maxLineCache = { width: 0, valid: false };
+function invalidateWidthCache() { _maxLineCache.valid = false; }
+
+/* getComputedStyle のフォント文字列キャッシュ */
+let _editorFontCache = "";
+let _lnFontCache = "";
+function invalidateFontCache() { _editorFontCache = ""; _lnFontCache = ""; }
+
+/* オーバーレイ(line-hl/search-hl/indent-guides)のサイズをeditorの実コンテンツに同期 */
+let _lastOverlayW = 0, _lastOverlayH = 0;
+function syncOverlaySize() {
+    const w = editor.offsetWidth;
+    const h = editor.offsetHeight;
+    if (w === _lastOverlayW && h === _lastOverlayH) return;
+    _lastOverlayW = w;
+    _lastOverlayH = h;
+    const sh = document.getElementById("search-hl");
+    const ig = document.getElementById("indent-guides");
+    if (sh) { sh.style.width = w + "px"; sh.style.height = h + "px"; }
+    if (ig) { ig.style.width = w + "px"; ig.style.height = h + "px"; }
+    if (lineHl) { lineHl.style.width = w + "px"; }
+    _lastGuideWidth = 0;
+}
 /* =====================================================================
    HELPERS
    ===================================================================== */
@@ -692,7 +715,8 @@ function syncEditorWidth() {
     }
     const wrapperW = editorWrapper.clientWidth;
     const contentW = Math.ceil(_maxLineCache.width) + 30; // 10px left pad + 20px margin
-    editor.style.width = Math.max(wrapperW, contentW) + 'px'; syncOverlaySize();
+    editor.style.width = Math.max(wrapperW, contentW) + 'px';
+    syncOverlaySize();
 }
 
 /**
@@ -1074,7 +1098,24 @@ function createNewTab(name = 'untitled.txt', content = '', encoding = 'UTF8', ra
     });
     switchTab(id);
 }
-function openOrReplaceTab(name, content, encoding, raw) {  const t = getTab(activeTabId);  const isEmptyActive = t && !t.isDirty && t.content === "" && t.baselineContent === "" && (t.rawData == null);  if (isEmptyActive) {    t.name = name; t.content = content; t.baselineContent = content;    t.encoding = encoding; t.rawData = raw;    t.history = [{ value: content, ss: 0, se: 0 }]; t.histIdx = 0;    t.isDirty = false; t.scrollTop = 0;    editor.value = content;    fileNameInput.value = name;    document.getElementById("encoding").value = encoding;    updateEncodingDisplay(encoding);    renderTabs(); updateLineNumbers(); updateStatus();    scheduleGutterUpdate(); syncEditorWidth();  } else {    createNewTab(name, content, encoding, raw);  }}
+function openOrReplaceTab(name, content, encoding, raw) {
+    const t = getTab(activeTabId);
+    const isEmptyActive = t && !t.isDirty && t.content === "" && t.baselineContent === "" && (t.rawData == null);
+    if (isEmptyActive) {
+        t.name = name; t.content = content; t.baselineContent = content;
+        t.encoding = encoding; t.rawData = raw;
+        t.history = [{ value: content, ss: 0, se: 0 }]; t.histIdx = 0;
+        t.isDirty = false; t.scrollTop = 0;
+        editor.value = content;
+        fileNameInput.value = name;
+        document.getElementById("encoding").value = encoding;
+        updateEncodingDisplay(encoding);
+        renderTabs(); updateLineNumbers(); updateStatus();
+        scheduleGutterUpdate(); syncEditorWidth();
+    } else {
+        createNewTab(name, content, encoding, raw);
+    }
+}
 function renderTabs() {
     tabBar.innerHTML = '';
     tabs.forEach(tab => {
@@ -1222,12 +1263,15 @@ function switchTab(id) {
     updateGutter();
     requestAnimationFrame(() => {
         editorWrapper.scrollTop = tab.scrollTop;
-        invalidateWidthCache(); syncEditorWidth();
+        invalidateWidthCache();
+        syncEditorWidth();
         renderSearchHighlights();
         if (guidesVisible) updateIndentGuides();
     });
 }
-const _closedTabStack = []; const MAX_CLOSED_TABS = 10; // 閉じたタブの履歴（Ctrl+Shift+T で復元）
+// 閉じたタブの履歴（Ctrl+Shift+T で復元）
+const _closedTabStack = [];
+const MAX_CLOSED_TABS = 10;
 function closeTab(id) {
     const tab = getTab(id);
     if (tab && tab.isDirty) {
@@ -1251,9 +1295,22 @@ function closeTab(id) {
     }
     _doCloseTab(id);
 }
-function restoreLastClosedTab() { if (_closedTabStack.length === 0) { sbInfo.textContent = '復元できる閉じたタブはありません'; return; } const t = _closedTabStack.pop(); openOrReplaceTab(t.name, t.content, t.encoding, null); sbInfo.textContent = `復元: ${t.name}`; }
+function restoreLastClosedTab() {
+    if (_closedTabStack.length === 0) {
+        sbInfo.textContent = '復元できる閉じたタブはありません';
+        return;
+    }
+    const t = _closedTabStack.pop();
+    openOrReplaceTab(t.name, t.content, t.encoding, null);
+    sbInfo.textContent = `復元: ${t.name}`;
+}
 function _doCloseTab(id) {
-    const idx = tabs.findIndex(t => t.id === id); const _closingTab = tabs[idx]; if (_closingTab && _closingTab.content) { _closedTabStack.push({ name: _closingTab.name, content: _closingTab.content, encoding: _closingTab.encoding }); if (_closedTabStack.length > MAX_CLOSED_TABS) _closedTabStack.shift(); }
+    const idx = tabs.findIndex(t => t.id === id);
+    const _closingTab = tabs[idx];
+    if (_closingTab && _closingTab.content) {
+        _closedTabStack.push({ name: _closingTab.name, content: _closingTab.content, encoding: _closingTab.encoding });
+        if (_closedTabStack.length > MAX_CLOSED_TABS) _closedTabStack.shift();
+    }
     if (tabs.length === 1) {
         const t = tabs[0];
         t.content = ''; t.name = 'untitled.txt';
@@ -1606,7 +1663,8 @@ function getVisualRowCount(line, availWidth) {
 }
 
 function renderWrappedLineNumbers(logicalLines) {
-    if (!_editorFontCache) _editorFontCache = getComputedStyle(editor).font; _mct.font = _editorFontCache;
+    if (!_editorFontCache) _editorFontCache = getComputedStyle(editor).font;
+    _mct.font = _editorFontCache;
     const avail = Math.max(1, editorWrapper.clientWidth - 20);
     let ln = '';
     for (let i = 0; i < logicalLines.length; i++) {
@@ -1634,7 +1692,8 @@ function updateLineNumbers() {
     const digits   = String(lineCount).length;
     const minDigits = Math.max(2, digits);
     // 文字幅は canvas で実測（フォント変更時も正確）
-    if (!_lnFontCache) _lnFontCache = getComputedStyle(lineNumbers).font; _mct.font = _lnFontCache;
+    if (!_lnFontCache) _lnFontCache = getComputedStyle(lineNumbers).font;
+    _mct.font = _lnFontCache;
     const charW  = _mct.measureText('0').width;
     const newW   = Math.ceil(minDigits * charW) + 12; // 12px = 左右余白合計
     if (parseInt(lineNumbers.style.width) !== newW) {
@@ -1647,7 +1706,8 @@ function updateLineNumbers() {
         renderWrappedLineNumbers(text.split('\n'));
         const saved = editorWrapper.scrollTop;
         editor.style.height = 'auto';
-        editor.style.height = Math.max(editorWrapper.clientHeight, editor.scrollHeight) + 'px'; syncOverlaySize();
+        editor.style.height = Math.max(editorWrapper.clientHeight, editor.scrollHeight) + 'px';
+        syncOverlaySize();
         editorWrapper.scrollTop = saved;
     } else {
         if (lineCount !== lastLineCount) {
@@ -1660,7 +1720,8 @@ function updateLineNumbers() {
         const needed = Math.max(editorWrapper.clientHeight, lineCount * lh + 20);
         if (Math.abs((parseInt(editor.style.height) || 0) - needed) > 1)
             editor.style.height = needed + 'px';
-    } syncOverlaySize();
+    }
+    syncOverlaySize();
 }
 
 /* =====================================================================
@@ -1703,7 +1764,12 @@ function cycleLineEnding() {
     let text   = editor.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     if (cur === 'LF') text = text.replace(/\n/g, '\r\n');
     editor.value = text;
-    _matchCacheKey = ''; markDirty(); saveToHistory(); updateLineNumbers(); updateStatus(); renderSearchHighlights();
+    _matchCacheKey = '';
+    markDirty();
+    saveToHistory();
+    updateLineNumbers();
+    updateStatus();
+    renderSearchHighlights();
 }
 
 /* =====================================================================
@@ -1723,10 +1789,12 @@ function toggleExtMenu() {
 function toggleWordWrap() {
     globalWordWrap = !globalWordWrap;
     editor.style.whiteSpace = globalWordWrap ? 'pre-wrap' : 'pre';
-    document.getElementById('wrapBtn').classList.toggle('active', globalWordWrap); try { localStorage.setItem("editor:wordWrap", globalWordWrap ? "1" : "0"); } catch(_){}
+    document.getElementById('wrapBtn').classList.toggle('active', globalWordWrap);
+    try { localStorage.setItem("editor:wordWrap", globalWordWrap ? "1" : "0"); } catch(_){}
     lastLineCount = 0;
     updateLineNumbers();
-    invalidateWidthCache(); syncEditorWidth();
+    invalidateWidthCache();
+    syncEditorWidth();
     renderSearchHighlights();
 }
 
@@ -1738,7 +1806,8 @@ function toggleWordWrap() {
 function toggleIndentGuides() {
     guidesVisible = !guidesVisible;
     document.getElementById('guideBtn').classList.toggle('active', guidesVisible);
-    indentGuidesEl.style.display = guidesVisible ? 'block' : 'none'; try { localStorage.setItem("editor:indentGuides", guidesVisible ? "1" : "0"); } catch(_){}
+    indentGuidesEl.style.display = guidesVisible ? 'block' : 'none';
+    try { localStorage.setItem("editor:indentGuides", guidesVisible ? "1" : "0"); } catch(_){}
     if (guidesVisible) updateIndentGuides();
 }
 
@@ -1754,7 +1823,9 @@ function updateIndentGuides() {
 
     // 幅・高さが前回と同じなら再描画不要
     const edH = editor.offsetHeight || editorWrapper.clientHeight;
-    if (edW === _lastGuideWidth && edH === _lastGuideHeight) return; _lastGuideWidth = edW; _lastGuideHeight = edH;
+    if (edW === _lastGuideWidth && edH === _lastGuideHeight) return;
+    _lastGuideWidth = edW;
+    _lastGuideHeight = edH;
 
     const maxCols = Math.ceil((edW - pad) / cw4) + 2;
 
@@ -1868,7 +1939,10 @@ function unformatExcelFormula() {
 }
 
 // 行先頭のインデント1段（タブ or 1〜4個の半角空白）を削除し、{line, removed} を返す
-function _outdentLine(l) { const m = l.match(/^(\t| {1,4})/); return m ? { line: l.slice(m[0].length), removed: m[0].length } : { line: l, removed: 0 }; }
+function _outdentLine(l) {
+    const m = l.match(/^(\t| {1,4})/);
+    return m ? { line: l.slice(m[0].length), removed: m[0].length } : { line: l, removed: 0 };
+}
 /* =====================================================================
    EDITOR KEYBOARD HANDLING
    ===================================================================== */
@@ -2064,11 +2138,25 @@ window.addEventListener('keydown', e => {
     const ctrl = e.ctrlKey || e.metaKey;
     if (e.key === 'F1')  { e.preventDefault(); showHelp(); return; }
     if (e.key === 'F3')  { e.preventDefault(); e.shiftKey ? searchPrev() : searchNextBtn(); return; }
-    if (ctrl) { const _t = e.target; if (_t && (_t.tagName === 'INPUT' || _t.tagName === 'TEXTAREA') && _t !== editor) { /* 検索/置換ボックス等での Ctrl+Z/Y はブラウザ標準（INPUT 内の Undo）に任せる */ return; }
+    if (ctrl) {
+        const _t = e.target;
+        if (_t && (_t.tagName === 'INPUT' || _t.tagName === 'TEXTAREA') && _t !== editor) {
+            /* 検索/置換ボックス等での Ctrl+Z/Y はブラウザ標準（INPUT 内の Undo）に任せる */
+            return;
+        }
         // Alt+, / Alt+. : タブ切り替え
         // ※ Ctrl+Tab / Ctrl+PageUp/Down はChrome がブラウザタブ切り替えに使うため
         //   Alt+カンマ（前）/ Alt+ピリオド（次）を採用（Chrome で非干渉）
-        if (e.key === "Tab") { e.preventDefault(); if (tabs.length >= 2) { const idx = tabs.findIndex(t => t.id === activeTabId); const next = e.shiftKey ? (idx - 1 + tabs.length) % tabs.length : (idx + 1) % tabs.length; switchTab(tabs[next].id); } return; } switch (e.key.toLowerCase()) {
+        if (e.key === "Tab") {
+            e.preventDefault();
+            if (tabs.length >= 2) {
+                const idx = tabs.findIndex(t => t.id === activeTabId);
+                const next = e.shiftKey ? (idx - 1 + tabs.length) % tabs.length : (idx + 1) % tabs.length;
+                switchTab(tabs[next].id);
+            }
+            return;
+        }
+        switch (e.key.toLowerCase()) {
             case 's': e.preventDefault(); saveFile();     return;
             case 'z': e.preventDefault(); e.shiftKey ? redo() : undo(); return;
             case 'y': e.preventDefault(); redo();         return;
@@ -2086,7 +2174,8 @@ window.addEventListener('keydown', e => {
                 });
                 return;
             }
-            case 'd': e.preventDefault(); if (!isComposing) duplicateLine(); return; case 't': if (e.shiftKey) { e.preventDefault(); restoreLastClosedTab(); return; } break;
+            case 'd': e.preventDefault(); if (!isComposing) duplicateLine(); return;
+            case 't': if (e.shiftKey) { e.preventDefault(); restoreLastClosedTab(); return; } break;
         }
     }
     if (e.altKey && !ctrl) {
@@ -2246,7 +2335,12 @@ function updateStyle() {
     const fam  = document.getElementById('fontFamily').value;
     const size = document.getElementById('fontSize').value;
     editor.style.fontFamily      = fam;
-    editor.style.fontSize        = size; try { localStorage.setItem("editor:fontFamily", fam); localStorage.setItem("editor:fontSize", size); invalidateFontCache(); } catch(_){}
+    editor.style.fontSize        = size;
+    try {
+        localStorage.setItem("editor:fontFamily", fam);
+        localStorage.setItem("editor:fontSize", size);
+        invalidateFontCache();
+    } catch(_){}
     lineNumbers.style.fontFamily = fam;
     lineNumbers.style.fontSize   = size;
     setTimeout(() => {
@@ -2430,8 +2524,143 @@ function showConfirmModal(title, body, onConfirm) {
     document.getElementById('modal-overlay').style.display = 'flex';
 }
 
-function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; } /* Escape でモーダル/ヘルプを閉じる */ document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const mo = document.getElementById('modal-overlay'); const ho = document.getElementById('help-overlay'); if (ho && getComputedStyle(ho).display !== 'none') { e.preventDefault(); e.stopPropagation(); closeHelp(); return; } if (mo && getComputedStyle(mo).display !== 'none') { e.preventDefault(); e.stopPropagation(); closeModal(); return; } }, true);
-/* セッション復元（前回のタブを localStorage に保存／復元） */ const SESSION_KEY = 'editor:session'; const SESSION_ACTIVE_KEY = 'editor:sessionActive'; const SESSION_MAX_TAB = 1024 * 1024; const SESSION_MAX_TOTAL = 4 * 1024 * 1024; function saveSessionSnapshot() { if (!tabs || tabs.length === 0) return; const onlyEmpty = tabs.every(t => !t.isDirty && t.content === '' && t.baselineContent === '' && t.rawData == null); if (onlyEmpty) { try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_ACTIVE_KEY); } catch(_){} return; } const snap = []; let total = 0; for (const t of tabs) { if (t.rawData) continue; if (typeof t.content !== 'string') continue; const sz = t.content.length * 2; if (sz > SESSION_MAX_TAB) continue; if (total + sz > SESSION_MAX_TOTAL) break; total += sz; const h = (t.history && t.history[t.histIdx]) || { ss: 0, se: 0 }; snap.push({ id: t.id, name: t.name, content: t.content, baseline: t.baselineContent, encoding: t.encoding, isDirty: t.isDirty, scrollTop: t.scrollTop || 0, ss: h.ss || 0, se: h.se || 0 }); } if (snap.length === 0) { try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_ACTIVE_KEY); } catch(_){} return; } try { localStorage.setItem(SESSION_KEY, JSON.stringify({ savedAt: Date.now(), tabs: snap })); localStorage.setItem(SESSION_ACTIVE_KEY, String(activeTabId)); } catch(_){} } function tryRestoreSession() { let raw; try { raw = localStorage.getItem(SESSION_KEY); } catch(_) { return false; } if (!raw) return false; let parsed; try { parsed = JSON.parse(raw); } catch(_) { try { localStorage.removeItem(SESSION_KEY); } catch(_){} return false; } if (!parsed || !Array.isArray(parsed.tabs) || parsed.tabs.length === 0) return false; const meaningful = parsed.tabs.some(t => t.isDirty || (t.content && t.content.length > 0)); if (!meaningful) { try { localStorage.removeItem(SESSION_KEY); } catch(_){} return false; } const dt = new Date(parsed.savedAt || 0); const dtStr = isNaN(dt.getTime()) ? '前回' : (dt.getFullYear() + '/' + String(dt.getMonth()+1).padStart(2,'0') + '/' + String(dt.getDate()).padStart(2,'0') + ' ' + String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0')); const dirtyCount = parsed.tabs.filter(t => t.isDirty).length; const msg = dtStr + ' に保存された ' + parsed.tabs.length + ' 個のタブ' + (dirtyCount > 0 ? '（うち未保存 ' + dirtyCount + ' 個）' : '') + ' を復元しますか？'; showConfirmModalChoice('セッションを復元', msg, () => { restoreFromSnapshot(parsed); closeModal(); }, () => { try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_ACTIVE_KEY); } catch(_){} createNewTab(); closeModal(); }); return true; } function restoreFromSnapshot(parsed) { let savedActive = null; try { savedActive = localStorage.getItem(SESSION_ACTIVE_KEY); } catch(_){} for (const s of parsed.tabs) { createNewTab(s.name || '無題', s.content || '', s.encoding || 'UTF8', null); const t = tabs[tabs.length - 1]; if (t) { if (typeof s.baseline === 'string') t.baselineContent = s.baseline; t.isDirty = !!s.isDirty; t.scrollTop = s.scrollTop || 0; if (t.history && t.history[0]) { t.history[0].ss = s.ss || 0; t.history[0].se = s.se || 0; } } } if (savedActive) { const target = tabs.find(t => String(t.id) === String(savedActive)); if (target) switchTab(target.id); } renderTabs(); updateLineNumbers(); updateStatus(); scheduleGutterUpdate(); invalidateWidthCache(); syncEditorWidth(); if (sbInfo) sbInfo.textContent = '前回のセッションを復元しました'; } function showConfirmModalChoice(title, body, onYes, onNo) { document.getElementById('modal-title').textContent = title; document.getElementById('modal-body').textContent = body; document.getElementById('modal-footer').innerHTML = '<button class="tbtn" id="conf-no-btn">破棄</button><button class="tbtn primary" id="conf-yes-btn">復元</button>'; document.getElementById('conf-yes-btn').onclick = onYes; document.getElementById('conf-no-btn').onclick = onNo; document.getElementById('modal-overlay').style.display = 'flex'; }
+function closeModal() {
+    document.getElementById('modal-overlay').style.display = 'none';
+}
+
+/* Escape でモーダル/ヘルプを閉じる */
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const mo = document.getElementById('modal-overlay');
+    const ho = document.getElementById('help-overlay');
+    if (ho && getComputedStyle(ho).display !== 'none') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeHelp();
+        return;
+    }
+    if (mo && getComputedStyle(mo).display !== 'none') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeModal();
+        return;
+    }
+}, true);
+/* セッション復元（前回のタブを localStorage に保存／復元） */
+const SESSION_KEY        = 'editor:session';
+const SESSION_ACTIVE_KEY = 'editor:sessionActive';
+const SESSION_MAX_TAB    = 1024 * 1024;
+const SESSION_MAX_TOTAL  = 4 * 1024 * 1024;
+
+function saveSessionSnapshot() {
+    if (!tabs || tabs.length === 0) return;
+    const onlyEmpty = tabs.every(t => !t.isDirty && t.content === '' && t.baselineContent === '' && t.rawData == null);
+    if (onlyEmpty) {
+        try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_ACTIVE_KEY); } catch(_){}
+        return;
+    }
+    const snap = [];
+    let total = 0;
+    for (const t of tabs) {
+        if (t.rawData) continue;
+        if (typeof t.content !== 'string') continue;
+        const sz = t.content.length * 2;
+        if (sz > SESSION_MAX_TAB) continue;
+        if (total + sz > SESSION_MAX_TOTAL) break;
+        total += sz;
+        const h = (t.history && t.history[t.histIdx]) || { ss: 0, se: 0 };
+        snap.push({
+            id: t.id, name: t.name, content: t.content, baseline: t.baselineContent,
+            encoding: t.encoding, isDirty: t.isDirty, scrollTop: t.scrollTop || 0,
+            ss: h.ss || 0, se: h.se || 0
+        });
+    }
+    if (snap.length === 0) {
+        try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_ACTIVE_KEY); } catch(_){}
+        return;
+    }
+    try {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ savedAt: Date.now(), tabs: snap }));
+        localStorage.setItem(SESSION_ACTIVE_KEY, String(activeTabId));
+    } catch(_){}
+}
+
+function tryRestoreSession() {
+    let raw;
+    try { raw = localStorage.getItem(SESSION_KEY); } catch(_) { return false; }
+    if (!raw) return false;
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch(_) {
+        try { localStorage.removeItem(SESSION_KEY); } catch(_){}
+        return false;
+    }
+    if (!parsed || !Array.isArray(parsed.tabs) || parsed.tabs.length === 0) return false;
+    const meaningful = parsed.tabs.some(t => t.isDirty || (t.content && t.content.length > 0));
+    if (!meaningful) {
+        try { localStorage.removeItem(SESSION_KEY); } catch(_){}
+        return false;
+    }
+    const dt    = new Date(parsed.savedAt || 0);
+    const dtStr = isNaN(dt.getTime()) ? '前回' : (
+        dt.getFullYear() + '/' +
+        String(dt.getMonth() + 1).padStart(2, '0') + '/' +
+        String(dt.getDate()).padStart(2, '0') + ' ' +
+        String(dt.getHours()).padStart(2, '0') + ':' +
+        String(dt.getMinutes()).padStart(2, '0')
+    );
+    const dirtyCount = parsed.tabs.filter(t => t.isDirty).length;
+    const msg = dtStr + ' に保存された ' + parsed.tabs.length + ' 個のタブ' +
+        (dirtyCount > 0 ? '（うち未保存 ' + dirtyCount + ' 個）' : '') + ' を復元しますか？';
+    showConfirmModalChoice('セッションを復元', msg,
+        () => { restoreFromSnapshot(parsed); closeModal(); },
+        () => {
+            try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_ACTIVE_KEY); } catch(_){}
+            createNewTab();
+            closeModal();
+        }
+    );
+    return true;
+}
+
+function restoreFromSnapshot(parsed) {
+    let savedActive = null;
+    try { savedActive = localStorage.getItem(SESSION_ACTIVE_KEY); } catch(_){}
+    for (const s of parsed.tabs) {
+        createNewTab(s.name || '無題', s.content || '', s.encoding || 'UTF8', null);
+        const t = tabs[tabs.length - 1];
+        if (t) {
+            if (typeof s.baseline === 'string') t.baselineContent = s.baseline;
+            t.isDirty   = !!s.isDirty;
+            t.scrollTop = s.scrollTop || 0;
+            if (t.history && t.history[0]) {
+                t.history[0].ss = s.ss || 0;
+                t.history[0].se = s.se || 0;
+            }
+        }
+    }
+    if (savedActive) {
+        const target = tabs.find(t => String(t.id) === String(savedActive));
+        if (target) switchTab(target.id);
+    }
+    renderTabs();
+    updateLineNumbers();
+    updateStatus();
+    scheduleGutterUpdate();
+    invalidateWidthCache();
+    syncEditorWidth();
+    if (sbInfo) sbInfo.textContent = '前回のセッションを復元しました';
+}
+
+function showConfirmModalChoice(title, body, onYes, onNo) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').textContent  = body;
+    document.getElementById('modal-footer').innerHTML  =
+        '<button class="tbtn" id="conf-no-btn">破棄</button>' +
+        '<button class="tbtn primary" id="conf-yes-btn">復元</button>';
+    document.getElementById('conf-yes-btn').onclick = onYes;
+    document.getElementById('conf-no-btn').onclick  = onNo;
+    document.getElementById('modal-overlay').style.display = 'flex';
+}
 /* =====================================================================
    HELP PANEL
    ===================================================================== */
@@ -2497,9 +2726,20 @@ const SHORTCUTS = [
     },
     {
         cat: '設定・データ保存',
-        items: [ { keys: ['フォント／サイズ'], desc: '全タブ共通で適用、リロード後も保持' }, { keys: ['テーマ'], desc: '11種から選択、リロード後も保持' }, { keys: ['折り返し／インデントガイド'], desc: 'ON/OFF を保存し次回起動時も復元' }, { keys: ['前回セッション'], desc: 'ブラウザを閉じた時のタブ群を起動時に復元（確認あり）' } ]
+        items: [
+            { keys: ['フォント／サイズ'],              desc: '全タブ共通で適用、リロード後も保持' },
+            { keys: ['テーマ'],                       desc: '11種から選択、リロード後も保持' },
+            { keys: ['折り返し／インデントガイド'],      desc: 'ON/OFF を保存し次回起動時も復元' },
+            { keys: ['前回セッション'],                desc: 'ブラウザを閉じた時のタブ群を起動時に復元（確認あり）' }
+        ]
     },
-    { cat: 'ヘルプ・情報', items: [ { keys: ['F1'], desc: 'このショートカット一覧を表示' }, { keys: ['Escape'], desc: 'モーダル／ヘルプを閉じる' } ] }
+    {
+        cat: 'ヘルプ・情報',
+        items: [
+            { keys: ['F1'],     desc: 'このショートカット一覧を表示' },
+            { keys: ['Escape'], desc: 'モーダル／ヘルプを閉じる' }
+        ]
+    }
 ];
 
 function showHelp() {
@@ -2553,7 +2793,9 @@ window.addEventListener('beforeunload', e => {
         e.preventDefault();
         e.returnValue = '未保存の変更があります。ページを離れますか？';
     }
-}); window.addEventListener('load', () => {
+});
+
+window.addEventListener('load', () => {
     lucide.createIcons();
     initThemeSelect();   // ドロップダウン初期化＋保存済みテーマを適用
     if (!tryRestoreSession()) createNewTab();
@@ -2566,7 +2808,33 @@ window.addEventListener('beforeunload', e => {
             document.getElementById('extIconExpand').style.display   = 'none';
             document.getElementById('extIconCollapse').style.display = '';
         }
-    } catch (_) {} try { /* B-7 設定復元 */ const ff = localStorage.getItem("editor:fontFamily"); const fs = localStorage.getItem("editor:fontSize"); const ww = localStorage.getItem("editor:wordWrap"); const ig = localStorage.getItem("editor:indentGuides"); if (ff) { const sel = document.getElementById("fontFamily"); for (const o of sel.options) if (o.value === ff) { sel.value = ff; break; } } if (fs) { const sel = document.getElementById("fontSize"); for (const o of sel.options) if (o.value === fs) { sel.value = fs; break; } } if (ww === "1") { globalWordWrap = true; editor.style.whiteSpace = "pre-wrap"; document.getElementById("wrapBtn").classList.add("active"); } if (ig === "1") { guidesVisible = true; document.getElementById("guideBtn").classList.add("active"); indentGuidesEl.style.display = "block"; } } catch(_) {}
+    } catch (_) {}
+
+    /* B-7 設定復元 */
+    try {
+        const ff = localStorage.getItem("editor:fontFamily");
+        const fs = localStorage.getItem("editor:fontSize");
+        const ww = localStorage.getItem("editor:wordWrap");
+        const ig = localStorage.getItem("editor:indentGuides");
+        if (ff) {
+            const sel = document.getElementById("fontFamily");
+            for (const o of sel.options) if (o.value === ff) { sel.value = ff; break; }
+        }
+        if (fs) {
+            const sel = document.getElementById("fontSize");
+            for (const o of sel.options) if (o.value === fs) { sel.value = fs; break; }
+        }
+        if (ww === "1") {
+            globalWordWrap = true;
+            editor.style.whiteSpace = "pre-wrap";
+            document.getElementById("wrapBtn").classList.add("active");
+        }
+        if (ig === "1") {
+            guidesVisible = true;
+            document.getElementById("guideBtn").classList.add("active");
+            indentGuidesEl.style.display = "block";
+        }
+    } catch(_) {}
 
     requestAnimationFrame(() => {
         updateStyle();
