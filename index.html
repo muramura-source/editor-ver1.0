@@ -212,7 +212,6 @@
 
         /* Line numbers */
         .line-numbers {
-            /* 初期幅は2桁分(+余白)。updateLineNumbers()がJS側で必要に応じて拡張する */
             width: 34px;
             min-width: 34px;
             padding: 10px 4px 10px 0;
@@ -233,19 +232,15 @@
         /* Editor wrapper */
         .editor-wrapper { flex: 1; position: relative; overflow: auto; }
 
-        /* ── INDENT GUIDES ────────────────────────────────────────
-           A single container holds all vertical guide lines.
-           Lines are injected by updateIndentGuides() in JS.
-           ────────────────────────────────────────────────────────── */
+        /* ── INDENT GUIDES ──────────────────────────────────────── */
         #indent-guides {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             pointer-events: none;
             z-index: 4;
-            display: none;      /* hidden until toggled */
+            display: none;
             overflow: hidden;
         }
-        /* Individual guide lines are <div> children, styled inline by JS */
 
         /* Current line highlight */
         #line-hl {
@@ -384,8 +379,6 @@
             border-top: 1px solid var(--border);
             text-align: right; flex-shrink: 0;
         }
-
-        /* Theme preview swatch in select */
         .theme-dot {
             display: inline-block; width: 10px; height: 10px;
             border-radius: 50%; margin-right: 4px;
@@ -395,12 +388,7 @@
 </head>
 <body>
 
-<!-- ── TOOLBAR ────────────────────────────────────────────────────────── -->
 <div class="toolbar">
-
-    <!-- ── ミニマム表示 ───────────────────────────────────────────── -->
-
-    <!-- 新規・開く・保存 -->
     <div class="tgroup">
         <button class="tbtn" onclick="createNewTab()" title="新規タブ (Ctrl+N)">
             <i data-lucide="file-plus"></i>
@@ -409,7 +397,6 @@
             <i data-lucide="folder-open"></i>
         </button>
         <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(event)" multiple accept=".txt,.csv,.tsv,.html,.htm,.css,.js,.mjs,.json,.jsonc,.md,.markdown,.xml,.yaml,.yml,.ini,.conf,.log,.sql,.py,.rb,.go,.rs,.ts,.tsx,.jsx,.vue,.svelte,.php,.sh,.bat,.ps1,.c,.cpp,.h,.hpp,.cs,.java,.kt,.swift,text/*">
-        <!-- fileNameInput は非表示で保持（JS参照のため） -->
         <input type="text" id="fileNameInput" style="display:none">
         <button class="tbtn primary" onclick="saveFile()" title="保存 (Ctrl+S)">
             <i data-lucide="save"></i>
@@ -418,7 +405,6 @@
 
     <div class="tsep"></div>
 
-    <!-- エンコード -->
     <div class="tgroup">
         <select id="encoding" onchange="changeEncoding()" style="width:100px">
             <option value="SJIS">ANSI(Shift_JIS)</option>
@@ -431,7 +417,6 @@
 
     <div class="tsep"></div>
 
-    <!-- フォント種類・サイズ -->
     <div class="tgroup">
         <select id="fontFamily" title="フォント種類（全タブ共通）" onchange="updateStyle()" style="width:80px">
             <option value="'Courier New',Courier,monospace" selected>等幅</option>
@@ -451,7 +436,6 @@
 
     <div class="tsep"></div>
 
-    <!-- 元に戻す・やり直し -->
     <div class="tgroup">
         <button class="tbtn" id="undoBtn" onclick="undo()" title="元に戻す (Ctrl+Z)">
             <i data-lucide="undo-2"></i>
@@ -463,7 +447,6 @@
 
     <div class="tsep"></div>
 
-    <!-- 折り返し -->
     <div class="tgroup">
         <button class="tbtn" id="wrapBtn" onclick="toggleWordWrap()" title="折り返し">
             <i data-lucide="wrap-text"></i>
@@ -472,119 +455,75 @@
 
     <div class="tsep"></div>
 
-    <!-- インデントガイド -->
     <div class="tgroup">
         <button class="tbtn" id="guideBtn" onclick="toggleIndentGuides()" title="インデントガイド (4列毎)">
             <i data-lucide="ruler"></i>
         </button>
     </div>
 
-    <!-- ── 拡張表示（display:contents で flex に直接参加） ────────── -->
     <div id="toolbar-ext">
-
         <div class="tsep"></div>
-
-        <!-- 検索・置換 -->
         <div class="tgroup">
             <div class="srch-wrap">
                 <i data-lucide="search" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
-                <input type="text" id="searchInput" placeholder="検索..."
-                       oninput="onSearchInput()" onkeydown="onSearchKeydown(event)">
-                <button class="tbtn srch-clear-btn" id="srchClearBtn" onclick="clearSearch()"
-                        title="クリア" style="display:none;padding:2px 3px;opacity:.6">×</button>
+                <input type="text" id="searchInput" placeholder="検索..." oninput="onSearchInput()" onkeydown="onSearchKeydown(event)">
+                <button class="tbtn srch-clear-btn" id="srchClearBtn" onclick="clearSearch()" title="クリア" style="display:none;padding:2px 3px;opacity:.6">×</button>
                 <span class="srch-counter" id="srchCounter"></span>
                 <div class="srch-sep"></div>
-                <button class="tbtn" id="caseBtn"  onclick="toggleCase()"
-                        title="大文字/小文字を区別 (Alt+C)"
-                        style="padding:2px 5px;font-weight:bold;font-size:11px">Aa</button>
-                <button class="tbtn" id="regexBtn" onclick="toggleRegex()"
-                        title="正規表現 (Alt+R)"
-                        style="padding:2px 5px;font-size:11px">.*</button>
-                <button class="tbtn" onclick="searchPrev()" title="前へ (Shift+F3)" style="padding:2px 4px">
-                    <i data-lucide="chevron-up"></i>
-                </button>
-                <button class="tbtn" onclick="searchNextBtn()" title="次へ (F3)" style="padding:2px 4px">
-                    <i data-lucide="chevron-down"></i>
-                </button>
+                <button class="tbtn" id="caseBtn"  onclick="toggleCase()" title="大文字/小文字を区別 (Alt+C)" style="padding:2px 5px;font-weight:bold;font-size:11px">Aa</button>
+                <button class="tbtn" id="regexBtn" onclick="toggleRegex()" title="正規表現 (Alt+R)" style="padding:2px 5px;font-size:11px">.*</button>
+                <button class="tbtn" onclick="searchPrev()" title="前へ (Shift+F3)" style="padding:2px 4px"><i data-lucide="chevron-up"></i></button>
+                <button class="tbtn" onclick="searchNextBtn()" title="次へ (F3)" style="padding:2px 4px"><i data-lucide="chevron-down"></i></button>
             </div>
             <div class="srch-wrap" style="margin-left:4px">
                 <i data-lucide="corner-down-right" style="width:13px;height:13px;color:#bbb;flex-shrink:0"></i>
-                <input type="text" id="replaceInput" placeholder="置換..."
-                       onkeydown="if(event.key==='Enter')replaceCurrent()">
-                <button class="tbtn" onclick="replaceCurrent()" title="置換 (Enter in replace box)" style="padding:2px 4px">
-                    <i data-lucide="check"></i>
-                </button>
-                <button class="tbtn" onclick="replaceAll()" title="一括置換" style="padding:2px 4px">
-                    <i data-lucide="chevrons-right"></i>
-                </button>
+                <input type="text" id="replaceInput" placeholder="置換..." onkeydown="if(event.key==='Enter')replaceCurrent()">
+                <button class="tbtn" onclick="replaceCurrent()" title="置換 (Enter in replace box)" style="padding:2px 4px"><i data-lucide="check"></i></button>
+                <button class="tbtn" onclick="replaceAll()" title="一括置換" style="padding:2px 4px"><i data-lucide="chevrons-right"></i></button>
             </div>
         </div>
 
         <div class="tsep"></div>
 
-        <!-- 数式整形・解除 -->
         <div class="tgroup">
-            <button class="tbtn success" onclick="formatExcelFormula()" title="Excel数式を整形">
-                <i data-lucide="list-tree"></i> 数式整形
-            </button>
-            <button class="tbtn" onclick="unformatExcelFormula()" title="整形を解除（1行にまとめる）">
-                <i data-lucide="list"></i> 解除
-            </button>
+            <button class="tbtn success" onclick="formatExcelFormula()" title="Excel数式を整形"><i data-lucide="list-tree"></i> 数式整形</button>
+            <button class="tbtn" onclick="unformatExcelFormula()" title="整形を解除（1行にまとめる）"><i data-lucide="list"></i> 解除</button>
         </div>
 
         <div class="tsep"></div>
 
-        <!-- 表示モード（テーマ） -->
         <div class="tgroup">
-            <select id="themeSelect" onchange="applyThemeFromSelect()" title="テーマを切り替え" style="width:208px">
-            </select>
+            <select id="themeSelect" onchange="applyThemeFromSelect()" title="テーマを切り替え" style="width:208px"></select>
         </div>
 
         <div class="tsep"></div>
 
-        <!-- ヘルプ -->
         <div class="tgroup">
-            <button class="tbtn" onclick="showHelp()" title="ショートカット一覧 (F1)">
-                <i data-lucide="circle-help"></i>
-            </button>
+            <button class="tbtn" onclick="showHelp()" title="ショートカット一覧 (F1)"><i data-lucide="circle-help"></i></button>
         </div>
+    </div>
 
-    </div><!-- /#toolbar-ext -->
-
-    <!-- 拡張トグルボタン（常に右端に表示） -->
-    <button class="tbtn" id="extToggleBtn" onclick="toggleExtMenu()"
-            title="拡張メニューを表示/非表示" style="margin-left:auto">
+    <button class="tbtn" id="extToggleBtn" onclick="toggleExtMenu()" title="拡張メニューを表示/非表示" style="margin-left:auto">
         <span id="extIconExpand"><i data-lucide="chevrons-right"></i></span>
         <span id="extIconCollapse" style="display:none"><i data-lucide="chevrons-left"></i></span>
     </button>
-
 </div>
 
-<!-- ── TAB BAR ───────────────────────────────────────────────────────── -->
 <div class="tab-bar" id="tab-bar"></div>
 
-<!-- ── MAIN AREA ─────────────────────────────────────────────────────── -->
 <div class="main-container">
     <div id="drop-zone">ファイルをドロップして開く</div>
-
-    <!-- Change gutter -->
     <div id="gutter-wrap"><div id="gutter-inner"></div></div>
-
-    <!-- Line numbers -->
     <div class="line-numbers" id="line-numbers">1</div>
 
-    <!-- Editor -->
     <div class="editor-wrapper" id="editor-wrapper">
         <div id="line-hl"></div>
-        <!-- Search match highlight overlay -->
         <div id="search-hl"></div>
-        <!-- Indent guides container (lines injected by JS) -->
         <div id="indent-guides"></div>
         <textarea id="editor" spellcheck="false"></textarea>
     </div>
 </div>
 
-<!-- ── STATUS BAR ────────────────────────────────────────────────────── -->
 <div class="statusbar">
     <div id="sb-info">準備完了</div>
     <div class="sb-right">
@@ -597,7 +536,6 @@
     </div>
 </div>
 
-<!-- ── REGULAR MODAL ─────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="modal-overlay">
     <div class="modal">
         <h3 id="modal-title">確認</h3>
@@ -606,7 +544,6 @@
     </div>
 </div>
 
-<!-- ── HELP MODAL ────────────────────────────────────────────────────── -->
 <div id="help-overlay" onclick="if(event.target===this)closeHelp()">
     <div class="help-modal">
         <div class="help-header">
@@ -621,9 +558,6 @@
 </div>
 
 <script>
-/* =====================================================================
-   GLOBALS
-   ===================================================================== */
 const editor          = document.getElementById('editor');
 const lineNumbers     = document.getElementById('line-numbers');
 const editorWrapper   = document.getElementById('editor-wrapper');
@@ -647,30 +581,24 @@ let searchMatches = [];
 let matchIndex    = -1;
 let caseSensitive = false;
 let useRegex      = false;
-let guidesVisible  = false;  // 全タブ共通：インデントガイド表示
-let globalWordWrap = false;  // 全タブ共通：折り返し表示
+let guidesVisible  = false;
+let globalWordWrap = false;
 let lastLineCount = 0;
-// 実際にレンダリングされた行高さ（scrollHeight 実測値）。
-// getComputedStyle の CSS 値と DPI スケールによるサブピクセル丸め誤差を避けるために使用。
 let _measuredLineHeight = 21;
 let inputTimer    = null;
-let widthSyncTimer = null;   // syncEditorWidth のデバウンス用（最適化 #6）
+let widthSyncTimer = null;
 let gutterTimer   = null;
 let draggedTabId  = null;
 
-// 折り返しモード用の行数計測キャンバス（1度だけ生成して使い回す）
 const _mc  = document.createElement('canvas');
 const _mct = _mc.getContext('2d');
-/* 最長行幅キャッシュ（syncEditorWidth 用） */
 let _maxLineCache = { width: 0, valid: false };
 function invalidateWidthCache() { _maxLineCache.valid = false; }
 
-/* getComputedStyle のフォント文字列キャッシュ */
 let _editorFontCache = "";
 let _lnFontCache = "";
 function invalidateFontCache() { _editorFontCache = ""; _lnFontCache = ""; }
 
-/* オーバーレイ(line-hl/search-hl/indent-guides)のサイズをeditorの実コンテンツに同期 */
 let _lastOverlayW = 0, _lastOverlayH = 0;
 function syncOverlaySize() {
     const w = editor.offsetWidth;
@@ -685,11 +613,7 @@ function syncOverlaySize() {
     if (lineHl) { lineHl.style.width = w + "px"; }
     _lastGuideWidth = 0;
 }
-/* =====================================================================
-   HELPERS
-   ===================================================================== */
 
-/** タブ文字を空白に展開する（canvas計測用） */
 function expandTabs(str) {
     let result = '', col = 0;
     for (const ch of str) {
@@ -699,14 +623,9 @@ function expandTabs(str) {
     return result;
 }
 
-/**
- * 非折り返しモード時にエディタ textarea の幅をコンテンツに合わせて広げる。
- * editor-wrapper の overflow:auto が横スクロールバーを表示する。
- */
 function syncEditorWidth() {
     if (globalWordWrap) { editor.style.width = '100%'; return; }
     _mct.font = getComputedStyle(editor).font;
-    // キャッシュ無効時のみ全行スキャン（タブ切替・読込・テーマ変更・フォント変更時など）
     if (!_maxLineCache.valid) {
         const lines = editor.value.split('\n');
         let maxW = 0;
@@ -717,24 +636,14 @@ function syncEditorWidth() {
         _maxLineCache = { width: maxW, valid: true };
     }
     const wrapperW = editorWrapper.clientWidth;
-    const contentW = Math.ceil(_maxLineCache.width) + 30; // 10px left pad + 20px margin
+    const contentW = Math.ceil(_maxLineCache.width) + 30;
     editor.style.width = Math.max(wrapperW, contentW) + 'px';
     syncOverlaySize();
 }
 
-/**
- * 検索ヒットをオーバーレイで描画する。
- * 全マッチを薄塗り、現在の選択マッチを濃く塗る。
- *
- * 差分更新:
- *   - マッチ自体が変化した場合 (buildMatches が走った): 全再構築
- *   - matchIndex のみ変化した場合: 旧/新カレントの div スタイルだけ書き換え
- */
-
-// 差分更新用の状態
-let _hlDivStore       = [];   // _hlDivStore[matchIdx] = [{div, normalCss, currentCss}, ...]
-let _hlCacheKeyRender = '';   // 前回フル描画時の _matchCacheKey
-let _hlLastMatchIndex = -2;   // 前回描画時の matchIndex
+let _hlDivStore       = [];
+let _hlCacheKeyRender = '';
+let _hlLastMatchIndex = -2;
 
 function renderSearchHighlights() {
     const overlay = document.getElementById('search-hl');
@@ -742,7 +651,6 @@ function renderSearchHighlights() {
 
     const q = document.getElementById('searchInput').value;
     if (!q || searchMatches.length === 0) {
-        // マッチなし → 全クリア
         overlay.innerHTML = '';
         _hlDivStore = []; _hlCacheKeyRender = ''; _hlLastMatchIndex = -2;
         return;
@@ -753,17 +661,13 @@ function renderSearchHighlights() {
     let lh = _measuredLineHeight || parseFloat(cs.lineHeight);
     if (!lh || isNaN(lh)) lh = parseFloat(cs.fontSize) * 1.5;
 
-    // ── Fast path: マッチは同じで matchIndex だけ変わった場合 ──────────
     if (_matchCacheKey === _hlCacheKeyRender &&
         _hlDivStore.length === searchMatches.length &&
         matchIndex !== _hlLastMatchIndex) {
-
-        // 前の current を normal スタイルに戻す
         const prev = _hlLastMatchIndex;
         if (prev >= 0 && prev < _hlDivStore.length) {
             _hlDivStore[prev].forEach(info => { info.div.style.cssText = info.normalCss; });
         }
-        // 新しい current を current スタイルに変える
         if (matchIndex >= 0 && matchIndex < _hlDivStore.length) {
             _hlDivStore[matchIndex].forEach(info => { info.div.style.cssText = info.currentCss; });
         }
@@ -771,36 +675,31 @@ function renderSearchHighlights() {
         return;
     }
 
-    // ── Full rebuild: マッチが変化した場合 ───────────────────────────────
     overlay.innerHTML = '';
     _hlDivStore = [];
     _hlCacheKeyRender = _matchCacheKey;
     _hlLastMatchIndex = matchIndex;
 
-    const pad  = 10; // editor の top/left padding
+    const pad  = 10;
     const text = editor.value;
     const frag = document.createDocumentFragment();
 
-    // テキスト全体の行頭オフセット配列を事前計算（高速化）
     const lineOffsets = [0];
     for (let i = 0; i < text.length; i++) {
         if (text[i] === '\n') lineOffsets.push(i + 1);
     }
-    let _lineIdxCursor = 0; // 前進検索用ポインタ。searchMatches は start 昇順なので前に戻らない
+    let _lineIdxCursor = 0;
     searchMatches.forEach((m, idx) => {
         const isCurrent = idx === matchIndex;
-
-        // マッチが複数行にまたがる場合にも対応
         const matchText  = text.substring(m.start, m.end);
         const matchLines = matchText.split('\n');
         let charPos = m.start;
         const divInfos = [];
 
         matchLines.forEach(mLine => {
-            // 行インデックスを lineOffsets で正確に求める
             let lineIdx = 0;
             while (_lineIdxCursor + 1 < lineOffsets.length && lineOffsets[_lineIdxCursor + 1] <= charPos) _lineIdxCursor++;
-            while (_lineIdxCursor > 0 && lineOffsets[_lineIdxCursor] > charPos) _lineIdxCursor--; // 安全策（通常は不要）
+            while (_lineIdxCursor > 0 && lineOffsets[_lineIdxCursor] > charPos) _lineIdxCursor--;
             lineIdx = _lineIdxCursor;
             const lineStart  = lineOffsets[lineIdx];
             const linePrefix = text.substring(lineStart, charPos);
@@ -809,7 +708,6 @@ function renderSearchHighlights() {
             const y = lineIdx * lh + pad;
             const w = Math.max(_mct.measureText(expandTabs(mLine)).width, 3);
 
-            // normal / current 両方の cssText を保持しておく（fast path で使い回す）
             const normalCss =
                 `position:absolute;top:${y + 1}px;left:${x}px;` +
                 `width:${w}px;height:${lh - 2}px;` +
@@ -824,7 +722,7 @@ function renderSearchHighlights() {
             div.style.cssText = isCurrent ? currentCss : normalCss;
             divInfos.push({ div, normalCss, currentCss });
             frag.appendChild(div);
-            charPos += mLine.length + 1; // +1 for '\n'
+            charPos += mLine.length + 1;
         });
 
         _hlDivStore.push(divInfos);
@@ -833,17 +731,7 @@ function renderSearchHighlights() {
     overlay.appendChild(frag);
 }
 
-/* =====================================================================
-   THEMES
-   ===================================================================== */
-
-/**
- * Each theme defines ALL CSS custom properties that vary between themes.
- * applyTheme() writes them to document.documentElement.style.
- * Properties not listed fall back to :root defaults.
- */
 const THEMES = {
-    /* ── LIGHT ──────────────────────────────────────────────────── */
     'GitHub Light': {
         '--bg':'#f6f8fa','--editor-bg':'#ffffff','--text':'#24292f',
         '--border':'#d0d7de','--accent':'#0969da','--accent-h':'#0550ae',
@@ -880,7 +768,6 @@ const THEMES = {
         '--sc-key-shadow':'#bfb9a6','--sc-key-text':'#586e75',
         '--gutter-legend-bg':'#eee8d5',
     },
-    /* ── DARK ────────────────────────────────────────────────────── */
     'One Dark Pro': {
         '--bg':'#21252b','--editor-bg':'#282c34','--text':'#abb2bf',
         '--border':'#3d4148','--accent':'#61afef','--accent-h':'#4d9fdf',
@@ -1027,12 +914,6 @@ const THEMES = {
     },
 };
 
-/**
- * Theme metadata: label shown in dropdown + one-line description.
- * swatch: editor-bg color used as the colored square.
- * fg: readable text color FOR THE OPTION ELEMENT (always set explicitly
- *     to avoid the OS rendering the option in the theme's own dark color).
- */
 const THEME_META = {
     'GitHub Light':   { swatch:'#ffffff', fg:'#24292f', desc:'GitHub配色の明るいライト' },
     'Solarized Light':{ swatch:'#fdf6e3', fg:'#657b83', desc:'クリーム背景・目に優しい' },
@@ -1046,14 +927,12 @@ const THEME_META = {
     'Solarized Dark': { swatch:'#002b36', fg:'#839496', desc:'ティール背景・科学的設計の配色' },
 };
 
-        // THEMES の全キー一覧を初期化時に1度だけ計算してキャッシュ
 const THEME_KEYS = Object.freeze(Object.keys(Object.values(THEMES)[0] || {}));
-/** Apply a named theme by setting CSS custom properties on <html> */
+
 function applyTheme(name) {
     const t = THEMES[name];
     if (!t) return;
     const root = document.documentElement;
-    // Use the first theme's keys as the canonical property list
     THEME_KEYS.forEach(k => root.style.removeProperty(k));
     Object.entries(t).forEach(([k, v]) => root.style.setProperty(k, v));
     try { localStorage.setItem('editorTheme', name); } catch (_) {}
@@ -1064,7 +943,6 @@ function applyThemeFromSelect() {
     applyTheme(name);
 }
 
-/** Populate the theme <select> and restore last-used theme */
 function initThemeSelect() {
     const sel     = document.getElementById('themeSelect');
     const saved   = (() => { try { return localStorage.getItem('editorTheme'); } catch(_){return null;} })();
@@ -1075,11 +953,8 @@ function initThemeSelect() {
         const opt  = document.createElement('option');
         opt.value    = name;
         opt.selected = name === current;
-        // OS のダーク/ライトモードに依存せず常に読みやすい配色を保つため、
-        // option 要素には fg/swatch を明示的に設定する
         opt.style.backgroundColor = meta.swatch;
         opt.style.color           = meta.fg;
-        // Label: swatch square + name + description
         opt.textContent = `■ ${name}（${meta.desc}）`;
         sel.appendChild(opt);
     });
@@ -1087,9 +962,6 @@ function initThemeSelect() {
     applyTheme(current);
 }
 
-/* =====================================================================
-   TAB MANAGEMENT
-   ===================================================================== */
 function createNewTab(name = 'untitled.txt', content = '', encoding = 'UTF8', raw = null) {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     tabs.push({
@@ -1132,7 +1004,6 @@ function renderTabs() {
         div.addEventListener('drop',      onTabDrop);
         div.addEventListener('dragend',   onTabDragEnd);
         div.onclick = e => {
-            // nameEl が編集中のときはタブ切り替えを抑止
             if (nameEl.contentEditable === 'true') return;
             switchTab(tab.id);
         };
@@ -1142,22 +1013,18 @@ function renderTabs() {
         nameEl.textContent = tab.name;
         nameEl.title = tab.name;
 
-        // ── ダブルクリックでインライン編集 ──────────────────────────
         nameEl.addEventListener('dblclick', e => {
             e.stopPropagation();
-            // まずこのタブをアクティブにする
             if (activeTabId !== tab.id) switchTab(tab.id);
 
             nameEl.contentEditable = 'true';
             nameEl.focus();
-            // テキストを全選択
             const range = document.createRange();
             range.selectNodeContents(nameEl);
             const sel = window.getSelection();
             sel.removeAllRanges();
             sel.addRange(range);
 
-            // 編集中はドラッグを無効化
             div.draggable = false;
 
             const commit = () => {
@@ -1170,7 +1037,6 @@ function renderTabs() {
                     fileNameInput.value = newName;
                     renderTabs();
                 } else {
-                    // 変更なし：表示だけ元に戻す
                     nameEl.textContent = tab.name;
                 }
             };
@@ -1183,7 +1049,7 @@ function renderTabs() {
             nameEl.addEventListener('keydown', ev => {
                 if (ev.key === 'Enter')  { ev.preventDefault(); nameEl.blur(); }
                 if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
-                ev.stopPropagation(); // エディタのキーハンドラに流さない
+                ev.stopPropagation();
             }, { once: false, _isRename: true });
 
             nameEl.addEventListener('blur', commit, { once: true });
@@ -1207,7 +1073,6 @@ function renderTabs() {
     });
 }
 
-/* タブのドラッグ＆ドロップで並び替え */
 function onTabDragStart(e) {
     draggedTabId = e.currentTarget.dataset.tabId;
     e.dataTransfer.effectAllowed = 'move';
@@ -1254,39 +1119,36 @@ function switchTab(id) {
     document.getElementById('encoding').value = tab.encoding;
     updateEncodingDisplay(tab.encoding);
     renderTabs();
-    // アクティブタブが視野外の場合は自動スクロールして見えるようにする
     requestAnimationFrame(() => {
         const activeEl = tabBar.querySelector('.tab.active');
         if (activeEl) activeEl.scrollIntoView({ inline: 'nearest', block: 'nearest' });
     });
-    lastLineCount = 0;
-    updateLineNumbers();
     updateStatus();
     updateUndoButtons();
     updateGutter();
     requestAnimationFrame(() => {
         editorWrapper.scrollTop = tab.scrollTop;
+        lastLineCount = 0;
         invalidateWidthCache();
         syncEditorWidth();
+        updateLineNumbers();
+        lineNumbers.scrollTop = editorWrapper.scrollTop;
         renderSearchHighlights();
         if (guidesVisible) updateIndentGuides();
     });
 }
-// 閉じたタブの履歴（Ctrl+Shift+T で復元）
 const _closedTabStack = [];
 const MAX_CLOSED_TABS = 10;
 function closeTab(id) {
     const tab = getTab(id);
     if (tab && tab.isDirty) {
-        // 未保存の場合は3択ダイアログを表示
         showDirtyCloseModal(tab.name,
-            () => _doCloseTab(id),          // 閉じる（破棄）
-            async () => {                   // 保存してから閉じる
+            () => _doCloseTab(id),
+            async () => {
                 const prev = activeTabId;
                 if (activeTabId !== id) switchTab(id);
                 const saved = await saveFile();
                 if (!saved) {
-                    // キャンセル or エラー → 閉じない。元のタブに戻す
                     if (activeTabId !== prev && prev && getTab(prev)) switchTab(prev);
                     return;
                 }
@@ -1350,9 +1212,6 @@ function markDirty() {
 
 function getTab(id) { return tabs.find(t => t.id === id) || null; }
 
-/* =====================================================================
-   HISTORY
-   ===================================================================== */
 function saveToHistory() {
     const tab = getTab(activeTabId);
     if (!tab) return;
@@ -1392,28 +1251,22 @@ function updateUndoButtons() {
     redoBtn.disabled = !tab || tab.histIdx >= tab.history.length - 1;
 }
 
-/* =====================================================================
-   SEARCH
-   ===================================================================== */
-// 文字列の軽量ハッシュ（DJB2系）。検索キャッシュキーで全文を保持しないために使う
 function _hashStr(s) {
     let h = 0; for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
     return h;
 }
-// buildMatches のキャッシュキー：テキスト・クエリ・オプションが前回と同じなら再計算不要
 let _matchCacheKey = '';
 
 function buildMatches() {
     const q    = document.getElementById('searchInput').value;
     const text = editor.value;
-    // クエリが空のときは常にリセット（キャッシュ対象外）
     if (!q) {
         searchMatches = []; matchIndex = -1;
         _matchCacheKey = '';
         refreshCounter(); renderSearchHighlights(); return;
     }
     const key = `${q}\0${caseSensitive}\0${useRegex}\0${text.length}\0${_hashStr(text)}`;
-    if (key === _matchCacheKey) return;   // 変化なし → 再計算スキップ
+    if (key === _matchCacheKey) return;
     _matchCacheKey = key;
     searchMatches  = [];
     try {
@@ -1447,7 +1300,7 @@ function refreshCounter() {
 function jumpToMatch(keepFocus = false) {
     if (matchIndex < 0 || matchIndex >= searchMatches.length) { refreshCounter(); renderSearchHighlights(); return; }
     const m = searchMatches[matchIndex];
-    if (!keepFocus) editor.focus();
+    if (!keepFocus) editor.focus({ preventScroll: true });
     editor.setSelectionRange(m.start, m.end);
     scrollToChar(m.start);
     refreshCounter();
@@ -1477,9 +1330,8 @@ function clearSearch() {
 function onSearchKeydown(e) {
     if (e.key === 'Enter')  { e.preventDefault(); e.shiftKey ? searchPrev() : searchNextBtn(); }
     if (e.key === 'Escape') {
-        // 検索ボックスをクリアしてハイライトも消してからエディタに戻る
         clearSearch();
-        editor.focus();
+        editor.focus({ preventScroll: true });
     }
 }
 
@@ -1542,7 +1394,6 @@ function replaceAll() {
     try {
         const flags   = 'g' + (caseSensitive ? '' : 'i');
         const pattern = useRegex ? q : q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        // 正規表現モードでは rep の $1, $& を有効化。リテラルモードでは $ をエスケープ
         const safeRep = useRegex ? rep : rep.replace(/\$/g, '$$$$');
         newText = editor.value.replace(new RegExp(pattern, flags), safeRep);
     } catch (_) {
@@ -1556,10 +1407,6 @@ function replaceAll() {
     showAlertModal('置換完了', `${count} 箇所の置換を行いました。`);
 }
 
-/* =====================================================================
-   CHANGE GUTTER  (per-line modified/added indicator)
-   ===================================================================== */
-// Map によるカウント方式で O(n) に抑えた類似度スコア
 function simScore(a, b) {
     if (a === b) return 1;
     const ta = a.trim(), tb = b.trim();
@@ -1620,8 +1467,6 @@ function updateGutter() {
     if (!tab) { gutterInner.innerHTML = ''; return; }
     const baseline = tab.baselineContent ?? '';
     const current  = editor.value;
-    // baseline と完全一致するときのみガターマークの計算をスキップ
-
 
     if (baseline === current) {
         gutterInner.innerHTML = '';
@@ -1651,9 +1496,6 @@ function updateGutter() {
     gutterInner.innerHTML = html;
 }
 
-/* =====================================================================
-   LINE NUMBERS  (with wrap-aware Method B)
-   ===================================================================== */
 function getVisualRowCount(line, availWidth) {
     if (line === '') return 1;
     let expanded = '', col = 0;
@@ -1665,15 +1507,26 @@ function getVisualRowCount(line, availWidth) {
     return Math.max(1, Math.ceil(w / availWidth));
 }
 
+let _wrapVisualToLogical = [];
+
 function renderWrappedLineNumbers(logicalLines) {
     if (!_editorFontCache) _editorFontCache = getComputedStyle(editor).font;
     _mct.font = _editorFontCache;
     const avail = Math.max(1, editorWrapper.clientWidth - 20);
+
+    const cssLH = parseFloat(getComputedStyle(editor).lineHeight);
+    if (cssLH && !isNaN(cssLH)) _measuredLineHeight = cssLH;
+
+    _wrapVisualToLogical = [];
     let ln = '';
     for (let i = 0; i < logicalLines.length; i++) {
         const rows = getVisualRowCount(logicalLines[i], avail);
+        _wrapVisualToLogical.push(i);
         ln += (i + 1) + '\n';
-        for (let r = 1; r < rows; r++) ln += '\n';
+        for (let r = 1; r < rows; r++) {
+            _wrapVisualToLogical.push(i);
+            ln += '\n';
+        }
     }
     lineNumbers.textContent = ln;
     lastLineCount = -1;
@@ -1689,29 +1542,28 @@ function updateLineNumbers() {
     const tab       = getTab(activeTabId);
     const isWrap    = globalWordWrap;
 
-    // 桁数に応じて行番号エリアの幅を自動調整（最低2桁分確保）
-
-
     const digits   = String(lineCount).length;
     const minDigits = Math.max(2, digits);
-    // 文字幅は canvas で実測（フォント変更時も正確）
     if (!_lnFontCache) _lnFontCache = getComputedStyle(lineNumbers).font;
     _mct.font = _lnFontCache;
     const charW  = _mct.measureText('0').width;
-    const newW   = Math.ceil(minDigits * charW) + 12; // 12px = 左右余白合計
+    const newW   = Math.ceil(minDigits * charW) + 12;
     if (parseInt(lineNumbers.style.width) !== newW) {
         lineNumbers.style.width    = newW + 'px';
         lineNumbers.style.minWidth = newW + 'px';
     }
 
-
     if (isWrap) {
         renderWrappedLineNumbers(text.split('\n'));
         const saved = editorWrapper.scrollTop;
         editor.style.height = 'auto';
-        editor.style.height = Math.max(editorWrapper.clientHeight, editor.scrollHeight) + 'px';
+        editor.style.minHeight = '0'; // ★追加: 一時的にmin-heightを解除して正確な高さを取得
+        const rawScrollHeight = editor.scrollHeight;
+        editor.style.minHeight = '100%'; // ★復元
+        editor.style.height = Math.max(editorWrapper.clientHeight, rawScrollHeight) + 'px';
         syncOverlaySize();
         editorWrapper.scrollTop = saved;
+        lineNumbers.scrollTop  = editorWrapper.scrollTop;
     } else {
         if (lineCount !== lastLineCount) {
             lastLineCount = lineCount;
@@ -1719,32 +1571,32 @@ function updateLineNumbers() {
             for (let i = 1; i <= lineCount; i++) ln += i + '\n';
             lineNumbers.textContent = ln;
         }
-        // ── 実際のレンダリング行高さを scrollHeight で実測する ──────────
-        // getComputedStyle の CSS 値は DPI スケール(125%/150%等)によるサブピクセル
-        // 丸め誤差を含む場合がある（例: 21px CSS → 実描画 20.8px）。
-        // height:auto にして scrollHeight を読むと OS/ブラウザが実際に使った値が得られる。
-        editor.style.height = 'auto';           // 一時的に解除して自然高さを得る
-        const _sh = editor.scrollHeight;        // 実測値（forced reflow）
-        // _sh = paddingTop(10) + lineCount × 実行高さ + paddingBottom(10)
+        
+        editor.style.height = 'auto';           
+        editor.style.minHeight = '0';           // ★追加: 確実なscrollHeight取得のため解除
+        const _sh = editor.scrollHeight;        
         _measuredLineHeight = lineCount > 0
             ? (_sh - 20) / lineCount
             : (parseFloat(getComputedStyle(editor).lineHeight) || 21);
+            
+        // フェイルセーフ：異常値になった場合はCSSのlineHeightを使う
+        if (isNaN(_measuredLineHeight) || _measuredLineHeight < 10) {
+            _measuredLineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 21;
+        }
+        
         const needed = Math.max(editorWrapper.clientHeight, _sh);
+        editor.style.minHeight = '100%';        // ★追加: 元に戻す
         editor.style.height = needed + 'px';
     }
     syncOverlaySize();
 }
 
-/* =====================================================================
-   STATUS BAR
-   ===================================================================== */
 function updateStatus() {
     const text   = editor.value;
     const ss     = editor.selectionStart;
     const se     = editor.selectionEnd;
     const before = text.substring(0, ss);
 
-    // split を1回ずつ使い、行数・現在行・選択行を1パスで算出する
     const beforeLines = before.split('\n');
     const lineNum = beforeLines.length;
     const col     = beforeLines[beforeLines.length - 1].length + 1;
@@ -1783,9 +1635,6 @@ function cycleLineEnding() {
     renderSearchHighlights();
 }
 
-/* =====================================================================
-   TOOLBAR EXTENDED MENU TOGGLE
-   ===================================================================== */
 function toggleExtMenu() {
     const ext      = document.getElementById('toolbar-ext');
     const isOpen   = ext.classList.toggle('open');
@@ -1794,14 +1643,12 @@ function toggleExtMenu() {
     try { localStorage.setItem('editorExtMenu', isOpen ? '1' : '0'); } catch (_) {}
 }
 
-/* =====================================================================
-   VIEW TOGGLES
-   ===================================================================== */
 function toggleWordWrap() {
     globalWordWrap = !globalWordWrap;
     editor.style.whiteSpace = globalWordWrap ? 'pre-wrap' : 'pre';
     document.getElementById('wrapBtn').classList.toggle('active', globalWordWrap);
     try { localStorage.setItem("editor:wordWrap", globalWordWrap ? "1" : "0"); } catch(_){}
+    if (!globalWordWrap) _wrapVisualToLogical = [];
     lastLineCount = 0;
     updateLineNumbers();
     invalidateWidthCache();
@@ -1809,11 +1656,6 @@ function toggleWordWrap() {
     renderSearchHighlights();
 }
 
-/* ── INDENT GUIDES ────────────────────────────────────────────────────
-   Draws 1px vertical lines at every 4-character column boundary.
-   Lines are absolutely positioned in #indent-guides (z-index 3).
-   We draw enough columns to cover the widest possible editor width.
-   ────────────────────────────────────────────────────────────────── */
 function toggleIndentGuides() {
     guidesVisible = !guidesVisible;
     document.getElementById('guideBtn').classList.toggle('active', guidesVisible);
@@ -1822,7 +1664,7 @@ function toggleIndentGuides() {
     if (guidesVisible) updateIndentGuides();
 }
 
-let _lastGuideWidth = 0, _lastGuideHeight = 0;   // 幅・高さ変化なければ再描画をスキップ
+let _lastGuideWidth = 0, _lastGuideHeight = 0;
 
 function updateIndentGuides() {
     if (!guidesVisible) return;
@@ -1832,7 +1674,6 @@ function updateIndentGuides() {
     const pad     = 10;
     const edW     = editor.offsetWidth || editorWrapper.clientWidth;
 
-    // 幅・高さが前回と同じなら再描画不要
     const edH = editor.offsetHeight || editorWrapper.clientHeight;
     if (edW === _lastGuideWidth && edH === _lastGuideHeight) return;
     _lastGuideWidth = edW;
@@ -1848,18 +1689,9 @@ function updateIndentGuides() {
     indentGuidesEl.innerHTML = html;
 }
 
-/* =====================================================================
-   EXCEL FORMULA TOOLS
-   選択範囲がある場合はその範囲のみ処理。
-   選択なし（ss === se）の場合はテキスト全体を処理。
-   ===================================================================== */
 function _processFormula(formula) {
-    // 整形ロジック本体（文字列→文字列）
-    // ・最外層（depth=1）のカンマのみ改行＋インデント
-    // ・ネスト内（depth>=2）のカンマはスペース区切りで1行維持
-    // ・{} 配列もネスト深さとしてカウント
     let result = '', inStr = false, curLen = 0, lastTok = '';
-    const stack = []; // { pos, isLET, argCount, type:'paren'|'brace' }
+    const stack = []; 
     const clean = formula.replace(/\s+/g, ' ');
     for (const ch of clean) {
         if (ch === '"') { inStr = !inStr; result += ch; curLen++; continue; }
@@ -1879,7 +1711,6 @@ function _processFormula(formula) {
         } else if (ch === ',') {
             const ctx = stack[stack.length - 1];
             if (ctx && stack.length === 1) {
-                // 最外層のみ改行（LETはペア内カンマをスペース区切りで同行に保つ）
                 ctx.argCount++;
                 if (ctx.isLET && ctx.argCount % 2 !== 0) {
                     result += ch + ' '; curLen += 2;
@@ -1887,7 +1718,6 @@ function _processFormula(formula) {
                     result += ch + '\n' + ' '.repeat(ctx.pos); curLen = ctx.pos;
                 }
             } else {
-                // ネスト内はカンマ+スペースで1行
                 result += ch + ' '; curLen += 2;
             }
             lastTok = '';
@@ -1902,7 +1732,6 @@ function _processFormula(formula) {
 }
 
 function _unprocessFormula(formula) {
-    // 解除ロジック本体（文字列→文字列）
     let result = '', inStr = false;
     for (const ch of formula) {
         if (ch === '"') { inStr = !inStr; result += ch; continue; }
@@ -1916,12 +1745,10 @@ function _unprocessFormula(formula) {
 function formatExcelFormula() {
     const ss = editor.selectionStart, se = editor.selectionEnd;
     if (ss === se) {
-        // 選択なし → 全体
         const formula = editor.value.trim();
         if (!formula) return;
         editor.value = _processFormula(formula);
     } else {
-        // 選択あり → 選択範囲のみ
         const sel = editor.value.substring(ss, se).trim();
         if (!sel) return;
         const processed = _processFormula(sel);
@@ -1934,12 +1761,10 @@ function formatExcelFormula() {
 function unformatExcelFormula() {
     const ss = editor.selectionStart, se = editor.selectionEnd;
     if (ss === se) {
-        // 選択なし → 全体
         const formula = editor.value;
         if (!formula) return;
         editor.value = _unprocessFormula(formula);
     } else {
-        // 選択あり → 選択範囲のみ
         const sel = editor.value.substring(ss, se);
         if (!sel) return;
         const processed = _unprocessFormula(sel);
@@ -1949,35 +1774,26 @@ function unformatExcelFormula() {
     scheduleGutterUpdate();
 }
 
-// 行先頭のインデント1段（タブ or 1〜4個の半角空白）を削除し、{line, removed} を返す
 function _outdentLine(l) {
     const m = l.match(/^(\t| {1,4})/);
     return m ? { line: l.slice(m[0].length), removed: m[0].length } : { line: l, removed: 0 };
 }
-/* =====================================================================
-   EDITOR KEYBOARD HANDLING
-   ===================================================================== */
+
 editor.addEventListener('keydown', e => {
     const start = editor.selectionStart;
     const end   = editor.selectionEnd;
     const text  = editor.value;
 
-    /* Tab / Shift+Tab：インデント／アウトデント */
     if (e.key === 'Tab') {
         e.preventDefault();
         if (start === end) {
             if (e.shiftKey) {
-                // カーソル位置のみ：現在行の先頭インデントを1段除去
                 const lineStart = text.lastIndexOf('\n', start - 1) + 1;
                 const lineEnd   = text.indexOf('\n', start);
                 const lineEndPos = lineEnd === -1 ? text.length : lineEnd;
                 const line      = text.substring(lineStart, lineEndPos);
                 const _r = _outdentLine(line);
                 const newLine = _r.line, removed = _r.removed;
-
-
-
-
 
                 if (removed > 0) {
                     editor.setRangeText(newLine, lineStart, lineEndPos, 'preserve');
@@ -1995,11 +1811,6 @@ editor.addEventListener('keydown', e => {
             if (e.shiftKey) {
                 newBlock = lines.map(l => {
                     return _outdentLine(l).line;
-
-
-
-
-
                 }).join('\n');
             } else {
                 newBlock = lines.map(l => '\t' + l).join('\n');
@@ -2011,7 +1822,6 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Home：スマートジャンプ */
     if (e.key === 'Home' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         const lineStart   = text.lastIndexOf('\n', start - 1) + 1;
@@ -2020,9 +1830,6 @@ editor.addEventListener('keydown', e => {
         const smartPos    = firstNS === -1 ? lineStart : lineStart + firstNS;
         const newPos      = start === smartPos ? lineStart : smartPos;
         if (e.shiftKey) {
-            // selectionDirection を見てアンカー端を正しく決定する
-            // 'backward': カーソルは selectionStart 側、アンカーは selectionEnd 側
-            // 'forward' / 'none': カーソルは selectionEnd 側、アンカーは selectionStart 側
             const dir    = editor.selectionDirection;
             const anchor = (dir === 'backward') ? editor.selectionEnd : editor.selectionStart;
             if (newPos <= anchor) {
@@ -2037,12 +1844,9 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Alt+↑/↓：行移動（複数行選択にも対応） */
     if (e.altKey && !e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
-        // 選択範囲を含む「行ブロック」の境界を求める
         const blockStart = text.lastIndexOf('\n', start - 1) + 1;
-        // end が改行直後（行頭）にある場合はその行を含めない
         const effEnd     = (end > start && text[end - 1] === '\n') ? end - 1 : end;
         let blockEnd     = text.indexOf('\n', effEnd);
         if (blockEnd === -1) blockEnd = text.length;
@@ -2070,7 +1874,6 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* 括弧の自動補完 */
     if (AUTO_PAIR[e.key]) {
         e.preventDefault();
         const closing = AUTO_PAIR[e.key];
@@ -2086,7 +1889,6 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* 閉じ括弧スキップ */
     if (CLOSING_CHARS.has(e.key) && !isComposing && start === end && text[start] === e.key) {
         e.preventDefault();
         editor.setSelectionRange(start + 1, start + 1);
@@ -2094,7 +1896,6 @@ editor.addEventListener('keydown', e => {
         return;
     }
 
-    /* Backspace：対応する括弧ペアを削除 */
     if (e.key === 'Backspace' && start === end && start > 0) {
         const prev = text[start - 1], next = text[start];
         if (AUTO_PAIR[prev] === next) {
@@ -2105,7 +1906,6 @@ editor.addEventListener('keydown', e => {
         }
     }
 
-    /* Enter：自動インデント／スマートインデント */
     if (e.key === 'Enter') {
         const lineStart   = text.lastIndexOf('\n', start - 1) + 1;
         const lineContent = text.substring(lineStart, start);
@@ -2125,10 +1925,8 @@ editor.addEventListener('keydown', e => {
 
         const lineHasContent = lineContent.trim().length > 0;
 
-        // インデントのみの行で Enter → 現在行の空白を除去して改行のみ挿入（VS Code 準拠）
         if (indent && !lineHasContent) {
             e.preventDefault();
-            // lineStart〜start の空白をすべて取り除き、改行だけ挿入
             editor.setRangeText('\n', lineStart, start, 'end');
             markDirty(); updateLineNumbers(); updateStatus();
             return;
@@ -2142,9 +1940,6 @@ editor.addEventListener('keydown', e => {
     }
 });
 
-/* =====================================================================
-   GLOBAL KEYBOARD SHORTCUTS
-   ===================================================================== */
 window.addEventListener('keydown', e => {
     const ctrl = e.ctrlKey || e.metaKey;
     if (e.key === 'F1')  { e.preventDefault(); showHelp(); return; }
@@ -2152,12 +1947,8 @@ window.addEventListener('keydown', e => {
     if (ctrl) {
         const _t = e.target;
         if (_t && (_t.tagName === 'INPUT' || _t.tagName === 'TEXTAREA') && _t !== editor) {
-            /* 検索/置換ボックス等での Ctrl+Z/Y はブラウザ標準（INPUT 内の Undo）に任せる */
             return;
         }
-        // Alt+, / Alt+. : タブ切り替え
-        // ※ Ctrl+Tab / Ctrl+PageUp/Down はChrome がブラウザタブ切り替えに使うため
-        //   Alt+カンマ（前）/ Alt+ピリオド（次）を採用（Chrome で非干渉）
         if (e.key === "Tab") {
             e.preventDefault();
             if (tabs.length >= 2) {
@@ -2172,12 +1963,10 @@ window.addEventListener('keydown', e => {
             case 'z': e.preventDefault(); e.shiftKey ? redo() : undo(); return;
             case 'y': e.preventDefault(); redo();         return;
             case 'n': e.preventDefault(); createNewTab(); return;
-            case 'w': e.preventDefault(); closeTab(activeTabId); return; // Ctrl+W (ブラウザ依存)
+            case 'w': e.preventDefault(); closeTab(activeTabId); return; 
             case 'f': e.preventDefault(); {
-                // 拡張メニューが閉じていれば自動展開してから検索ボックスにフォーカス
                 const ext = document.getElementById('toolbar-ext');
                 if (!ext.classList.contains('open')) toggleExtMenu();
-                // DOM更新後にフォーカス（toggleExtMenu が display 変更するため rAF で待つ）
                 requestAnimationFrame(() => {
                     const si = document.getElementById('searchInput');
                     si.focus();
@@ -2192,7 +1981,6 @@ window.addEventListener('keydown', e => {
     if (e.altKey && !ctrl) {
         if (e.key.toLowerCase() === 'c') { e.preventDefault(); toggleCase();  return; }
         if (e.key.toLowerCase() === 'r') { e.preventDefault(); toggleRegex(); return; }
-        // Alt+, (前のタブ) / Alt+. (次のタブ)
         if (e.key === ',' || e.key === '.') {
             e.preventDefault();
             if (tabs.length < 2) return;
@@ -2220,16 +2008,11 @@ function duplicateLine() {
     scheduleGutterUpdate();
 }
 
-/* =====================================================================
-   EDITOR EVENTS
-   ===================================================================== */
-/* IME入力中フラグ：compositionstart〜compositionend の間は履歴保存・状態更新を抑制 */
 let isComposing = false;
 editor.addEventListener('compositionstart', () => { isComposing = true; });
 editor.addEventListener('compositionend',   () => {
     isComposing = false;
-    _matchCacheKey = '';   // テキスト変更でマッチキャッシュを無効化
-    // IME確定時に一度だけ処理を走らせる
+    _matchCacheKey = '';   
     markDirty();
     updateLineNumbers();
     updateStatus();
@@ -2248,9 +2031,8 @@ editor.addEventListener('compositionend',   () => {
 });
 
 editor.addEventListener('input', () => {
-    // IME変換中は処理をスキップ（compositionend で一括処理する）
     if (isComposing) return;
-    _matchCacheKey = '';   // テキスト変更でマッチキャッシュを無効化
+    _matchCacheKey = '';   
     markDirty();
     updateLineNumbers();
     updateStatus();
@@ -2259,12 +2041,9 @@ editor.addEventListener('input', () => {
     clearTimeout(inputTimer);
     inputTimer = setTimeout(saveToHistory, 600);
     scheduleGutterUpdate();
-    // テキスト変更時はインデントガイドを再描画（折り返し時に幅が変化するため）
     if (guidesVisible) updateIndentGuides();
-    // 非折り返し時は横幅を再同期（高頻度入力時の負荷軽減のためデバウンス）
     clearTimeout(widthSyncTimer);
     widthSyncTimer = setTimeout(() => { invalidateWidthCache(); syncEditorWidth(); }, 150);
-    // 検索ボックスに文字がある場合はマッチ再計算してHL更新
     if (document.getElementById('searchInput').value) {
         buildMatches();
         findNearestMatch();
@@ -2279,25 +2058,27 @@ editorWrapper.addEventListener('scroll', () => {
 
 ['click', 'keyup', 'focus', 'mouseup'].forEach(ev => editor.addEventListener(ev, updateStatus));
 
-/* 行番号エリア：クリックで行選択、ドラッグで複数行選択 */
 (function () {
     let dragging    = false;
-    let dragAnchorLine = -1; // ドラッグ開始時の論理行インデックス
+    let dragAnchorLine = -1; 
 
     function lineIndexAt(offsetY) {
         const lh = _measuredLineHeight || parseFloat(getComputedStyle(editor).lineHeight);
-        return Math.max(0, Math.floor((offsetY + lineNumbers.scrollTop - 10) / lh));
+        const visualRow = Math.max(0, Math.floor((offsetY + lineNumbers.scrollTop - 10) / lh));
+        if (globalWordWrap && _wrapVisualToLogical.length > 0) {
+            return _wrapVisualToLogical[Math.min(visualRow, _wrapVisualToLogical.length - 1)];
+        }
+        return visualRow;
     }
 
     function lineRange(lines, li) {
-        // 論理行 li の {start, end} 文字位置を返す
         let pos = 0;
         for (let i = 0; i < li; i++) pos += lines[i].length + 1;
         return { start: pos, end: pos + lines[li].length };
     }
 
     lineNumbers.addEventListener('mousedown', e => {
-        e.preventDefault(); // 行番号領域自体のテキスト選択を防ぐ
+        e.preventDefault(); 
         const lines = editor.value.split('\n');
         const li    = lineIndexAt(e.offsetY);
         if (li >= lines.length) return;
@@ -2306,15 +2087,19 @@ editorWrapper.addEventListener('scroll', () => {
         dragAnchorLine = li;
 
         const { start, end } = lineRange(lines, li);
-        editor.focus();
+        
+        // ★修正: フォーカス時にスクロールが一番上までジャンプするのを防ぐ
+        const savedScroll = editorWrapper.scrollTop;
+        editor.focus({ preventScroll: true }); 
         editor.setSelectionRange(start, end);
+        editorWrapper.scrollTop = savedScroll;
+        
         updateStatus();
     });
 
     window.addEventListener('mousemove', e => {
         if (!dragging) return;
         const lines = editor.value.split('\n');
-        // ウィンドウ座標から lineNumbers ローカルの offsetY に変換
         const rect   = lineNumbers.getBoundingClientRect();
         const localY = e.clientY - rect.top;
         const li     = Math.min(Math.max(0, lineIndexAt(localY)), lines.length - 1);
@@ -2322,7 +2107,6 @@ editorWrapper.addEventListener('scroll', () => {
         const anchorRange  = lineRange(lines, dragAnchorLine);
         const currentRange = lineRange(lines, li);
 
-        // アンカー〜現在位置を行単位で完全選択
         const selStart = Math.min(anchorRange.start, currentRange.start);
         const selEnd   = Math.max(anchorRange.end,   currentRange.end);
         editor.setSelectionRange(selStart, selEnd);
@@ -2332,16 +2116,17 @@ editorWrapper.addEventListener('scroll', () => {
     window.addEventListener('mouseup', () => { dragging = false; });
 })();
 
-/* エディタラッパーがリサイズされたらガイドを再計算 */
+// ★修正: ResizeObserverによる無限ループ（スライドバーの激しい点滅）を防ぐためデバウンスを導入
+let _guideResizeTimer = null;
 const _guideResizeObserver = new ResizeObserver(() => {
-    if (guidesVisible) updateIndentGuides();
-    syncEditorWidth();
+    clearTimeout(_guideResizeTimer);
+    _guideResizeTimer = setTimeout(() => {
+        if (guidesVisible) updateIndentGuides();
+        syncEditorWidth();
+    }, 50);
 });
 _guideResizeObserver.observe(editorWrapper);
 
-/* =====================================================================
-   STYLE  (font / size)
-   ===================================================================== */
 function updateStyle() {
     const fam  = document.getElementById('fontFamily').value;
     const size = document.getElementById('fontSize').value;
@@ -2363,9 +2148,6 @@ function updateStyle() {
     }, 10);
 }
 
-/* =====================================================================
-   ENCODING
-   ===================================================================== */
 const ENC_LABEL = {
     SJIS:'ANSI (Shift_JIS)', UTF16LE:'UTF-16 LE', UTF16BE:'UTF-16 BE',
     UTF8:'UTF-8', UTF8BOM:'UTF-8 (BOM 付き)'
@@ -2396,9 +2178,6 @@ function changeEncoding() {
     else { updateEncodingDisplay(enc); if (tab) tab.encoding = enc; }
 }
 
-/* =====================================================================
-   FILE I/O
-   ===================================================================== */
 async function handleFileSelect(e) {
     for (const f of Array.from(e.target.files)) await readFile(f);
     e.target.value = '';
@@ -2466,7 +2245,7 @@ async function saveFile() {
             return true;
         } catch (err) {
             if (err.name !== 'AbortError') showAlertModal('エラー', '保存に失敗しました。');
-            return false; // キャンセル or エラー
+            return false; 
         }
     } else {
         const url = URL.createObjectURL(blob);
@@ -2481,9 +2260,6 @@ async function saveFile() {
     }
 }
 
-/* =====================================================================
-   DRAG & DROP (files onto editor area)
-   ===================================================================== */
 const dropZone = document.getElementById('drop-zone');
 window.addEventListener('dragover',  e => { e.preventDefault(); dropZone.style.display = 'flex'; });
 window.addEventListener('dragleave', e => { if (!e.relatedTarget) dropZone.style.display = 'none'; });
@@ -2494,14 +2270,6 @@ window.addEventListener('drop', async e => {
     for (const f of files) await readFile(f);
 });
 
-/* =====================================================================
-   MODALS
-   ===================================================================== */
-/**
- * 未保存タブを閉じる際の3択モーダル
- * onClose   … 保存せずに閉じる
- * onSave    … 保存してから閉じる（saveFile() 後に onClose を呼ぶ）
- */
 function showDirtyCloseModal(tabName, onClose, onSave) {
     document.getElementById('modal-title').textContent = '未保存の変更があります';
     document.getElementById('modal-body').textContent  =
@@ -2539,7 +2307,6 @@ function closeModal() {
     document.getElementById('modal-overlay').style.display = 'none';
 }
 
-/* Escape でモーダル/ヘルプを閉じる */
 document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     const mo = document.getElementById('modal-overlay');
@@ -2557,7 +2324,7 @@ document.addEventListener('keydown', e => {
         return;
     }
 }, true);
-/* セッション復元（前回のタブを localStorage に保存／復元） */
+
 const SESSION_KEY        = 'editor:session';
 const SESSION_ACTIVE_KEY = 'editor:sessionActive';
 const SESSION_MAX_TAB    = 1024 * 1024;
@@ -2672,9 +2439,7 @@ function showConfirmModalChoice(title, body, onYes, onNo) {
     document.getElementById('conf-no-btn').onclick  = onNo;
     document.getElementById('modal-overlay').style.display = 'flex';
 }
-/* =====================================================================
-   HELP PANEL
-   ===================================================================== */
+
 const SHORTCUTS = [
     {
         cat: 'ファイル操作',
@@ -2792,12 +2557,7 @@ function closeHelp() {
     document.getElementById('help-overlay').style.display = 'none';
 }
 
-/* =====================================================================
-   INIT
-   ===================================================================== */
-/* ブラウザを閉じる・リロード時の処理：未保存警告 + セッション保存 */
 window.addEventListener('beforeunload', e => {
-    /* セッションスナップショットを保存（次回起動時に復元可能） */
     try { saveSessionSnapshot(); } catch(_) {}
     const hasDirty = tabs.some(t => t.isDirty);
     if (hasDirty) {
@@ -2808,10 +2568,9 @@ window.addEventListener('beforeunload', e => {
 
 window.addEventListener('load', () => {
     lucide.createIcons();
-    initThemeSelect();   // ドロップダウン初期化＋保存済みテーマを適用
+    initThemeSelect();   
     if (!tryRestoreSession()) createNewTab();
 
-    // 拡張メニューの前回状態を復元
     try {
         if (localStorage.getItem('editorExtMenu') === '1') {
             const ext = document.getElementById('toolbar-ext');
@@ -2821,7 +2580,6 @@ window.addEventListener('load', () => {
         }
     } catch (_) {}
 
-    /* B-7 設定復元 */
     try {
         const ff = localStorage.getItem("editor:fontFamily");
         const fs = localStorage.getItem("editor:fontSize");
